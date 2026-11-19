@@ -26,7 +26,7 @@ QuestCatalog.CHAPTERS = {
 		title = "Bintang Sekolah",
 		steps = {
 			{ key = "rebirthed", target = 1, text = "Rebirth once", reward = 3000 },
-			{ key = "ownedCount", target = 20, text = "Own 20 different brainrots", reward = 5000 },
+			{ key = "ownedCount", target = 30, text = "Own 30 different brainrots", reward = 5000 },
 			{ key = "stole", target = 3, text = "Steal 3 brainrots in total", reward = 4000 },
 		},
 	},
@@ -53,7 +53,7 @@ function QuestCatalog.GetDailyQuests(dayOfYear)
 	return picked
 end
 
--- Rarity ranks, for the "Rare or better" daily quest.
+-- Tier ranks, for the "Rare or better" daily quest.
 QuestCatalog.RARITY_RANK = {
 	Common = 1,
 	Uncommon = 2,
@@ -63,6 +63,13 @@ QuestCatalog.RARITY_RANK = {
 	Mythic = 6,
 	Divine = 7,
 	Secret = 8,
+	Celestial = 9,
+	Galactic = 10,
+	Eternal = 11,
+	Godly = 12,
+	Supreme = 13,
+	Ultimate = 14,
+	PRINCIPAL = 15,
 }
 
 return QuestCatalog

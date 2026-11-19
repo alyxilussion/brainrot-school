@@ -111,19 +111,8 @@ local function spawnParadeBrainrot()
 	task.spawn(walkParade, record)
 end
 
-local function rollHighPadRarity()
-	local roll = rng:NextNumber()
-	if roll < 0.08 then
-		return "Secret"
-	elseif roll < 0.3 then
-		return "Divine"
-	else
-		return "Mythic"
-	end
-end
-
 local function spawnHighPadBrainrot(pad)
-	local rarity = rollHighPadRarity()
+	local rarity = Catalog.RollTier(rng, Config.HIGH_PAD_WEIGHTS)
 	local entry = Catalog.GetRandomOfRarity(rarity, rng)
 	local mutation = Catalog.RollMutation(rng, 0)
 	local uid = HttpService:GenerateGUID(false)

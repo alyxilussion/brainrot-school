@@ -26,6 +26,10 @@ local stateEvent = remotes:WaitForChild("StateUpdate")
 local notifyEvent = remotes:WaitForChild("Notify")
 local hazardEvent = remotes:WaitForChild("HazardAlert")
 local crowEvent = remotes:WaitForChild("CrowAlert")
+local openGachaEvent = remotes:WaitForChild("OpenGacha")
+local openFuseEvent = remotes:WaitForChild("OpenFuse")
+local rollGachaEvent = remotes:WaitForChild("RollGacha")
+local fuseEvent = remotes:WaitForChild("FuseBrainrots")
 
 local DARK = Color3.fromRGB(22, 26, 38)
 local GOLD = Color3.fromRGB(255, 215, 0)
@@ -113,7 +117,7 @@ specLabel.BackgroundTransparency = 1
 specLabel.Font = Enum.Font.GothamBold
 specLabel.TextSize = 13
 specLabel.TextColor3 = GREY
-specLabel.Text = "40 BRAINROTS  ·  8 RARITIES  ·  5 MUTATIONS  ·  PULL  ·  PUSH  ·  QUEST"
+specLabel.Text = "60 BRAINROTS  ·  15 TIERS  ·  5 MUTATIONS  ·  PULL  ·  PUSH  ·  QUEST"
 specLabel.Parent = topBar
 
 -- Event banner: the Lunch Rush countdown and the rush itself.
@@ -236,7 +240,7 @@ hintLabel.BackgroundTransparency = 1
 hintLabel.Font = Enum.Font.GothamBold
 hintLabel.TextSize = 15
 hintLabel.TextColor3 = WHITE
-hintLabel.Text = "[Q] PULL   ·   [F] PUSH   ·   [E] STEAL   ·   [L] LOCK   ·   Click a brainrot to buy it"
+hintLabel.Text = "[Q] PULL   ·   [F] PUSH   ·   [E] STEAL / SIT / GACHA / FUSE   ·   [L] LOCK   ·   Click a brainrot to buy it"
 hintLabel.Parent = gui
 
 -- Bottom buttons: lock, rebirth, report card, upgrades.
@@ -472,6 +476,276 @@ for i, upgradeId in ipairs(UpgradeCatalog.ORDER) do
 	upgradeRows[upgradeId] = { levelLabel = levelLabel, buyButton = buyButton }
 end
 
+-- Gacha panel: one roll, one flat price, one random brainrot straight to
+-- your classroom. Opens from the Gacha Machine's Press [E] prompt.
+local gachaFrame = Instance.new("Frame")
+gachaFrame.Name = "Gacha"
+gachaFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+gachaFrame.Position = UDim2.fromScale(0.5, 0.5)
+gachaFrame.Size = UDim2.fromOffset(460, 300)
+gachaFrame.BackgroundColor3 = DARK
+gachaFrame.BackgroundTransparency = 0.05
+gachaFrame.BorderSizePixel = 0
+gachaFrame.Visible = false
+gachaFrame.Parent = gui
+roundCorners(gachaFrame, 14)
+
+local gachaTitle = Instance.new("TextLabel")
+gachaTitle.Size = UDim2.new(1, -20, 0, 34)
+gachaTitle.Position = UDim2.fromOffset(10, 10)
+gachaTitle.BackgroundTransparency = 1
+gachaTitle.Font = Enum.Font.FredokaOne
+gachaTitle.TextSize = 24
+gachaTitle.TextColor3 = GOLD
+gachaTitle.TextXAlignment = Enum.TextXAlignment.Left
+gachaTitle.Text = "GACHA MACHINE"
+gachaTitle.Parent = gachaFrame
+
+local gachaClose = makeButton(gachaFrame, "X", Color3.fromRGB(200, 70, 70), UDim2.fromOffset(36, 36), UDim2.new(1, -46, 0, 10))
+gachaClose.TextSize = 20
+
+local gachaDesc = Instance.new("TextLabel")
+gachaDesc.Size = UDim2.new(1, -20, 0, 60)
+gachaDesc.Position = UDim2.fromOffset(10, 54)
+gachaDesc.BackgroundTransparency = 1
+gachaDesc.Font = Enum.Font.Gotham
+gachaDesc.TextSize = 16
+gachaDesc.TextColor3 = GREY
+gachaDesc.TextXAlignment = Enum.TextXAlignment.Left
+gachaDesc.TextYAlignment = Enum.TextYAlignment.Top
+gachaDesc.TextWrapped = true
+gachaDesc.Text = "One roll: $1,000. A random brainrot — any of the 15 tiers — goes straight to a free pedestal in your classroom. Higher tiers are rarer!"
+gachaDesc.Parent = gachaFrame
+
+local gachaCashLabel = Instance.new("TextLabel")
+gachaCashLabel.Size = UDim2.new(1, -20, 0, 26)
+gachaCashLabel.Position = UDim2.fromOffset(10, 122)
+gachaCashLabel.BackgroundTransparency = 1
+gachaCashLabel.Font = Enum.Font.GothamBold
+gachaCashLabel.TextSize = 17
+gachaCashLabel.TextColor3 = GOLD
+gachaCashLabel.TextXAlignment = Enum.TextXAlignment.Left
+gachaCashLabel.Text = "Your cash: $100"
+gachaCashLabel.Parent = gachaFrame
+
+local gachaRollButton = makeButton(gachaFrame, "ROLL — $1,000", Color3.fromRGB(230, 70, 70), UDim2.fromOffset(280, 56), UDim2.new(0.5, -140, 0, 168))
+gachaRollButton.TextSize = 22
+gachaRollButton.MouseButton1Click:Connect(function()
+	rollGachaEvent:FireServer()
+end)
+
+local gachaNote = Instance.new("TextLabel")
+gachaNote.Size = UDim2.new(1, -20, 0, 40)
+gachaNote.Position = UDim2.fromOffset(10, 236)
+gachaNote.BackgroundTransparency = 1
+gachaNote.Font = Enum.Font.Gotham
+gachaNote.TextSize = 13
+gachaNote.TextColor3 = GREY
+gachaNote.TextWrapped = true
+gachaNote.Text = "Tip: a full base blocks the roll — fuse your extras first!"
+gachaNote.Parent = gachaFrame
+
+-- Fuse panel: pick three brainrots of one tier and fuse them into the next.
+local fuseFrame = Instance.new("Frame")
+fuseFrame.Name = "FuseLab"
+fuseFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+fuseFrame.Position = UDim2.fromScale(0.5, 0.5)
+fuseFrame.Size = UDim2.fromOffset(640, 500)
+fuseFrame.BackgroundColor3 = DARK
+fuseFrame.BackgroundTransparency = 0.05
+fuseFrame.BorderSizePixel = 0
+fuseFrame.Visible = false
+fuseFrame.Parent = gui
+roundCorners(fuseFrame, 14)
+
+local fuseTitle = Instance.new("TextLabel")
+fuseTitle.Size = UDim2.new(1, -20, 0, 34)
+fuseTitle.Position = UDim2.fromOffset(10, 10)
+fuseTitle.BackgroundTransparency = 1
+fuseTitle.Font = Enum.Font.FredokaOne
+fuseTitle.TextSize = 24
+fuseTitle.TextColor3 = GOLD
+fuseTitle.TextXAlignment = Enum.TextXAlignment.Left
+fuseTitle.Text = "FUSE LAB"
+fuseTitle.Parent = fuseFrame
+
+local fuseClose = makeButton(fuseFrame, "X", Color3.fromRGB(200, 70, 70), UDim2.fromOffset(36, 36), UDim2.new(1, -46, 0, 10))
+fuseClose.TextSize = 20
+
+local fuseDesc = Instance.new("TextLabel")
+fuseDesc.Size = UDim2.new(1, -20, 0, 22)
+fuseDesc.Position = UDim2.fromOffset(10, 46)
+fuseDesc.BackgroundTransparency = 1
+fuseDesc.Font = Enum.Font.Gotham
+fuseDesc.TextSize = 14
+fuseDesc.TextColor3 = GREY
+fuseDesc.TextXAlignment = Enum.TextXAlignment.Left
+fuseDesc.Text = "Select 3 brainrots of the SAME tier — they fuse into 1 of the next tier."
+fuseDesc.Parent = fuseFrame
+
+local fuseSelectedLabel = Instance.new("TextLabel")
+fuseSelectedLabel.Size = UDim2.new(1, -20, 0, 24)
+fuseSelectedLabel.Position = UDim2.fromOffset(10, 70)
+fuseSelectedLabel.BackgroundTransparency = 1
+fuseSelectedLabel.Font = Enum.Font.GothamBold
+fuseSelectedLabel.TextSize = 16
+fuseSelectedLabel.TextColor3 = WHITE
+fuseSelectedLabel.TextXAlignment = Enum.TextXAlignment.Left
+fuseSelectedLabel.Text = "Selected: 0/3"
+fuseSelectedLabel.Parent = fuseFrame
+
+local fuseScroll = Instance.new("ScrollingFrame")
+fuseScroll.Size = UDim2.new(1, -20, 1, -160)
+fuseScroll.Position = UDim2.fromOffset(10, 100)
+fuseScroll.BackgroundTransparency = 1
+fuseScroll.BorderSizePixel = 0
+fuseScroll.ScrollBarThickness = 6
+fuseScroll.CanvasSize = UDim2.fromOffset(0, 0)
+fuseScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+fuseScroll.Parent = fuseFrame
+
+local fuseList = Instance.new("UIListLayout")
+fuseList.Padding = UDim.new(0, 6)
+fuseList.Parent = fuseScroll
+
+local fuseButton = makeButton(fuseFrame, "FUSE — pick 3", Color3.fromRGB(90, 95, 110), UDim2.fromOffset(280, 48), UDim2.new(0.5, -140, 1, -60))
+fuseButton.TextSize = 20
+
+local fuseSelected = {} -- [pedestalId] = true
+local fuseSelectedTier = nil
+local fuseRows = {} -- [pedestalId] = row button
+local fuseSignature = ""
+
+local function refreshFuseSelection()
+	local count = 0
+	local tier = nil
+	for pedestalId in pairs(fuseSelected) do
+		count += 1
+		local row = fuseRows[pedestalId]
+		if row then
+			tier = row:GetAttribute("Tier")
+		end
+	end
+	fuseSelectedTier = tier
+	if count == 0 then
+		fuseSelectedLabel.Text = "Selected: 0/3"
+	else
+		fuseSelectedLabel.Text = "Selected: " .. count .. "/3  (" .. (tier or "?") .. ")"
+	end
+	for pedestalId, row in pairs(fuseRows) do
+		if fuseSelected[pedestalId] then
+			row.BackgroundColor3 = Color3.fromRGB(90, 140, 220)
+		else
+			row.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+		end
+	end
+	if count == 3 then
+		fuseButton.Text = "FUSE!"
+		fuseButton.BackgroundColor3 = Color3.fromRGB(150, 90, 230)
+	else
+		fuseButton.Text = "FUSE — pick 3"
+		fuseButton.BackgroundColor3 = Color3.fromRGB(90, 95, 110)
+	end
+end
+
+local function refreshFuseList(snapshot)
+	-- Rebuild the rows only when the placed set actually changed, so a
+	-- selection survives the once-a-second snapshot.
+	local parts = {}
+	for _, placed in ipairs(snapshot.placed) do
+		table.insert(parts, placed.pedestalId)
+	end
+	table.sort(parts)
+	local signature = table.concat(parts, ",")
+	if signature == fuseSignature then
+		return
+	end
+	fuseSignature = signature
+	for _, child in ipairs(fuseScroll:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	fuseRows = {}
+	-- Drop selections whose brainrot is no longer placed.
+	local stillPlaced = {}
+	for _, placed in ipairs(snapshot.placed) do
+		stillPlaced[placed.pedestalId] = true
+	end
+	for pedestalId in pairs(fuseSelected) do
+		if not stillPlaced[pedestalId] then
+			fuseSelected[pedestalId] = nil
+		end
+	end
+	local sorted = table.clone(snapshot.placed)
+	table.sort(sorted, function(a, b)
+		local rankA = QuestCatalog.RARITY_RANK[a.rarity] or 0
+		local rankB = QuestCatalog.RARITY_RANK[b.rarity] or 0
+		if rankA ~= rankB then
+			return rankA < rankB
+		end
+		return a.name < b.name
+	end)
+	for _, placed in ipairs(sorted) do
+		local entry = Catalog.ById[placed.catalogId]
+		local row = Instance.new("TextButton")
+		row.Size = UDim2.new(1, -8, 0, 40)
+		row.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+		row.BorderSizePixel = 0
+		row.Font = Enum.Font.GothamBold
+		row.TextSize = 15
+		row.TextColor3 = WHITE
+		row.TextXAlignment = Enum.TextXAlignment.Left
+		row:SetAttribute("Tier", placed.rarity)
+		local income = entry and Catalog.MutatedIncome(entry, placed.mutation) or 0
+		local mutationText = placed.mutation and (" · " .. placed.mutation) or ""
+		row.Text = "   " .. placed.name .. "  —  " .. placed.rarity .. mutationText .. "  ·  $" .. income .. "/s"
+		row.Parent = fuseScroll
+		roundCorners(row, 8)
+		fuseRows[placed.pedestalId] = row
+		row.MouseButton1Click:Connect(function()
+			if fuseSelected[placed.pedestalId] then
+				fuseSelected[placed.pedestalId] = nil
+			else
+				local count = 0
+				for _ in pairs(fuseSelected) do
+					count += 1
+				end
+				if count >= 3 then
+					showNotify("Pick only 3 brainrots!", "warn")
+					return
+				end
+				if fuseSelectedTier and placed.rarity ~= fuseSelectedTier then
+					showNotify("Fuse needs 3 of the SAME tier!", "warn")
+					return
+				end
+				fuseSelected[placed.pedestalId] = true
+			end
+			refreshFuseSelection()
+		end)
+	end
+	refreshFuseSelection()
+end
+
+fuseButton.MouseButton1Click:Connect(function()
+	local count = 0
+	for _ in pairs(fuseSelected) do
+		count += 1
+	end
+	if count ~= 3 then
+		showNotify("Select 3 brainrots of the same tier first!", "warn")
+		return
+	end
+	local ids = {}
+	for pedestalId in pairs(fuseSelected) do
+		table.insert(ids, pedestalId)
+	end
+	fuseEvent:FireServer(ids)
+	fuseSelected = {}
+	fuseSelectedTier = nil
+	refreshFuseSelection()
+end)
+
 -- Snapshot rendering: one function paints every HUD element from the state.
 local function refreshQuests(snapshot)
 	local chapter = QuestCatalog.CHAPTERS[snapshot.questChapter]
@@ -527,7 +801,12 @@ end
 
 local function onStateUpdate(snapshot)
 	cashLabel.Text = formatMoney(snapshot.cash)
-	incomeLabel.Text = "+" .. formatMoney(snapshot.income) .. "/s  ·  x" .. snapshot.multiplier
+	local incomeText = "+" .. formatMoney(snapshot.income) .. "/s  ·  x" .. snapshot.multiplier
+	if snapshot.fresh then
+		incomeText ..= "  ·  FRESH +10% (" .. snapshot.freshSecondsLeft .. "s)"
+	end
+	incomeLabel.Text = incomeText
+	gachaCashLabel.Text = "Your cash: " .. formatMoney(snapshot.cash)
 	if snapshot.carriedCount > 0 then
 		carryingLabel.Text = "CARRYING: " .. table.concat(snapshot.carried, "  +  ") .. "  —  RUN HOME!"
 		carryingLabel.Visible = true
@@ -547,6 +826,7 @@ local function onStateUpdate(snapshot)
 	refreshQuests(snapshot)
 	refreshReportCard(snapshot)
 	refreshUpgrades(snapshot)
+	refreshFuseList(snapshot)
 end
 
 stateEvent.OnClientEvent:Connect(onStateUpdate)
@@ -579,16 +859,40 @@ end)
 indexButton.MouseButton1Click:Connect(function()
 	reportFrame.Visible = not reportFrame.Visible
 	upgradeFrame.Visible = false
+	gachaFrame.Visible = false
+	fuseFrame.Visible = false
 end)
 upgradeButton.MouseButton1Click:Connect(function()
 	upgradeFrame.Visible = not upgradeFrame.Visible
 	reportFrame.Visible = false
+	gachaFrame.Visible = false
+	fuseFrame.Visible = false
 end)
 reportClose.MouseButton1Click:Connect(function()
 	reportFrame.Visible = false
 end)
 upgradeClose.MouseButton1Click:Connect(function()
 	upgradeFrame.Visible = false
+end)
+gachaClose.MouseButton1Click:Connect(function()
+	gachaFrame.Visible = false
+end)
+fuseClose.MouseButton1Click:Connect(function()
+	fuseFrame.Visible = false
+end)
+
+-- The machines open their panels from their Press [E] prompts.
+openGachaEvent.OnClientEvent:Connect(function()
+	gachaFrame.Visible = true
+	reportFrame.Visible = false
+	upgradeFrame.Visible = false
+	fuseFrame.Visible = false
+end)
+openFuseEvent.OnClientEvent:Connect(function()
+	fuseFrame.Visible = true
+	reportFrame.Visible = false
+	upgradeFrame.Visible = false
+	gachaFrame.Visible = false
 end)
 
 -- Keys, bound through ContextActionService so the camera never eats them.

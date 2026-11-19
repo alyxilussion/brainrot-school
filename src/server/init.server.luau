@@ -19,6 +19,9 @@ local RebirthSystem = require(script.RebirthSystem)
 local UpgradeSystem = require(script.UpgradeSystem)
 local LockSystem = require(script.LockSystem)
 local IncomeTicker = require(script.IncomeTicker)
+local SitSystem = require(script.SitSystem)
+local GachaSystem = require(script.GachaSystem)
+local FuseSystem = require(script.FuseSystem)
 
 -- Order matters: remotes first (systems fetch them on use), then the world
 -- (systems read bases and pads from it), then the wiring, then the loops.
@@ -36,6 +39,9 @@ CarrySystem.Start()
 HazardSystem.Start()
 CrowThiefSystem.Start()
 IncomeTicker.Start()
+SitSystem.Start()
+GachaSystem.Start()
+FuseSystem.Start()
 
 -- Key-press actions arrive by remote; clicks and prompts fire server-side.
 remotes.PullPlayer.OnServerEvent:Connect(function(player)
@@ -52,6 +58,12 @@ remotes.DoRebirth.OnServerEvent:Connect(function(player)
 end)
 remotes.BuyUpgrade.OnServerEvent:Connect(function(player, upgradeId)
 	UpgradeSystem.TryBuyUpgrade(player, upgradeId)
+end)
+remotes.RollGacha.OnServerEvent:Connect(function(player)
+	GachaSystem.TryRoll(player)
+end)
+remotes.FuseBrainrots.OnServerEvent:Connect(function(player, pedestalIds)
+	FuseSystem.TryFuse(player, pedestalIds)
 end)
 
 local function firstFreeBase()

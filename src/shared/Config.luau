@@ -9,7 +9,7 @@ Config.GROUND_Y = 0.4
 -- Starting money for a new student.
 Config.START_CASH = 100
 
--- Rarity ladder, weakest first. Income and cost live in BrainrotCatalog.
+-- The 15-tier ladder, weakest first. Income and cost live in BrainrotCatalog.
 Config.RARITY_ORDER = {
 	"Common",
 	"Uncommon",
@@ -19,9 +19,16 @@ Config.RARITY_ORDER = {
 	"Mythic",
 	"Divine",
 	"Secret",
+	"Celestial",
+	"Galactic",
+	"Eternal",
+	"Godly",
+	"Supreme",
+	"Ultimate",
+	"PRINCIPAL",
 }
 
--- One readable colour per rarity, used for labels, pedestal rings and the Report Card.
+-- One readable colour per tier, used for labels, pedestal rings and the Report Card.
 Config.RARITY_COLORS = {
 	Common = Color3.fromRGB(120, 200, 90),
 	Uncommon = Color3.fromRGB(80, 170, 235),
@@ -30,19 +37,65 @@ Config.RARITY_COLORS = {
 	Legendary = Color3.fromRGB(245, 180, 30),
 	Mythic = Color3.fromRGB(235, 70, 60),
 	Divine = Color3.fromRGB(60, 230, 210),
-	Secret = Color3.fromRGB(255, 255, 255),
+	Secret = Color3.fromRGB(200, 200, 220),
+	Celestial = Color3.fromRGB(150, 225, 255),
+	Galactic = Color3.fromRGB(130, 90, 255),
+	Eternal = Color3.fromRGB(50, 210, 140),
+	Godly = Color3.fromRGB(255, 225, 100),
+	Supreme = Color3.fromRGB(255, 70, 150),
+	Ultimate = Color3.fromRGB(255, 120, 50),
+	PRINCIPAL = Color3.fromRGB(255, 255, 255),
 }
 
 -- Parade spawn weights. Luck upgrades tilt these toward the rare end.
 Config.RARITY_WEIGHTS = {
-	Common = 50,
-	Uncommon = 28,
-	Rare = 12,
-	Epic = 6,
-	Legendary = 2.5,
-	Mythic = 1,
-	Divine = 0.35,
-	Secret = 0.15,
+	Common = 45,
+	Uncommon = 25,
+	Rare = 13,
+	Epic = 7,
+	Legendary = 4,
+	Mythic = 2.2,
+	Divine = 1.3,
+	Secret = 0.8,
+	Celestial = 0.55,
+	Galactic = 0.35,
+	Eternal = 0.22,
+	Godly = 0.14,
+	Supreme = 0.09,
+	Ultimate = 0.05,
+	PRINCIPAL = 0.02,
+}
+
+-- Gacha weights: a little kinder than the parade, so a roll feels worth $1,000.
+Config.GACHA_WEIGHTS = {
+	Common = 30,
+	Uncommon = 24,
+	Rare = 16,
+	Epic = 10,
+	Legendary = 7,
+	Mythic = 4.5,
+	Divine = 3,
+	Secret = 2,
+	Celestial = 1.4,
+	Galactic = 0.9,
+	Eternal = 0.6,
+	Godly = 0.35,
+	Supreme = 0.15,
+	Ultimate = 0.08,
+	PRINCIPAL = 0.02,
+}
+
+-- High-pad weights: only Mythic and better ever appear on the high places.
+Config.HIGH_PAD_WEIGHTS = {
+	Mythic = 34,
+	Divine = 22,
+	Secret = 15,
+	Celestial = 11,
+	Galactic = 8,
+	Eternal = 5,
+	Godly = 3,
+	Supreme = 1.5,
+	Ultimate = 0.5,
 }
 
 -- Mutations: a brainrot that spawns mutated earns its income times this.
@@ -70,7 +123,14 @@ Config.PARADE_WALK_TIME = 45
 -- High pads (gym wall top, big tree top, academy tower): a Mythic-or-better
 -- brainrot appears here this often when the pad is empty. Free to grab.
 Config.HIGH_PAD_INTERVAL = 45
-Config.HIGH_PAD_RARITIES = { "Mythic", "Divine", "Secret" }
+
+-- The Gacha Machine: one flat price per roll, whatever tier comes out.
+Config.GACHA_COST = 1000
+
+-- Sitting on a bench or swing: a Fresh buff, then a long cooldown.
+Config.SIT_BUFF_MULTIPLIER = 1.1
+Config.SIT_BUFF_DURATION = 60
+Config.SIT_COOLDOWN = 180
 
 -- Lunch Rush hazard: every interval, a countdown, then the stampede sweeps the field.
 Config.HAZARD_INTERVAL = 90

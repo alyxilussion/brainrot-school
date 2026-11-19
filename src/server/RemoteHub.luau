@@ -16,6 +16,8 @@ local REQUESTS = {
 	"ToggleLock",
 	"DoRebirth",
 	"BuyUpgrade",
+	"RollGacha",
+	"FuseBrainrots",
 }
 
 -- Server -> client: the server tells the player something changed.
@@ -24,6 +26,8 @@ local BROADCASTS = {
 	"Notify",
 	"HazardAlert",
 	"CrowAlert",
+	"OpenGacha",
+	"OpenFuse",
 }
 
 local remotes = nil

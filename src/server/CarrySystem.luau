@@ -217,6 +217,28 @@ function CarrySystem.DropAllCarried(player)
 	end
 end
 
+-- Puts a brainrot record on one pedestal: positions the model, registers it
+-- as placed, tints the pedestal ring, and attaches the steal prompt. Shared
+-- by hand placement, the Gacha Machine and the Fuse Lab. Silent skips the
+-- "Placed" message so the caller can announce its own result instead.
+function CarrySystem.PlaceRecordOnPedestal(player, state, record, base, pedestal, silent)
+	unweldModel(record.model)
+	record.model:PivotTo(CFrame.new(pedestal.position + Vector3.new(0, 1.6, 0)))
+	record.model.Parent = workspace
+	record.pedestalId = pedestal.id
+	state.placed[pedestal.id] = record
+	pedestal.top.Color = Config.RARITY_COLORS[record.rarity] or Color3.fromRGB(200, 200, 200)
+	if CarrySystem.OnPlaced then
+		CarrySystem.OnPlaced(record.model, player, record)
+	end
+	PlayerState.PushUpdate(state)
+	if not silent then
+		local entry = Catalog.ById[record.catalogId]
+		notify(player, "Placed " .. record.name .. " — earning $" .. Catalog.MutatedIncome(entry, record.mutation) .. "/s!", "good")
+	end
+	QuestSystem.OnEvent(player, "placed", { rarity = record.rarity })
+end
+
 -- Places the first carried brainrot on one of the player's own pedestals.
 function CarrySystem.TryPlace(player, pedestalId, base)
 	local state = PlayerState.Get(player)
@@ -246,19 +268,7 @@ function CarrySystem.TryPlace(player, pedestalId, base)
 		return
 	end
 	local record = table.remove(state.carried, 1)
-	unweldModel(record.model)
-	record.model:PivotTo(CFrame.new(pedestal.position + Vector3.new(0, 1.6, 0)))
-	record.model.Parent = workspace
-	record.pedestalId = pedestalId
-	state.placed[pedestalId] = record
-	pedestal.top.Color = Config.RARITY_COLORS[record.rarity] or Color3.fromRGB(200, 200, 200)
-	if CarrySystem.OnPlaced then
-		CarrySystem.OnPlaced(record.model, player, record)
-	end
-	PlayerState.PushUpdate(state)
-	local entry = Catalog.ById[record.catalogId]
-	notify(player, "Placed " .. record.name .. " — earning $" .. Catalog.MutatedIncome(entry, record.mutation) .. "/s!", "good")
-	QuestSystem.OnEvent(player, "placed", { rarity = record.rarity })
+	CarrySystem.PlaceRecordOnPedestal(player, state, record, base, pedestal, false)
 end
 
 -- Removes a placed brainrot: clears the pedestal tint and optionally destroys

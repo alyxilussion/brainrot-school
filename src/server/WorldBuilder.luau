@@ -382,6 +382,132 @@ local function buildHighPads()
 	return pads
 end
 
+-- A Press [E] prompt for an arena interactable. E is reserved for exactly
+-- these: SIT on benches and swings, GACHA, FUSE, and STEAL on rival bases.
+-- Buying a parade brainrot is always a click, never an E prompt.
+local function interactPrompt(parent, actionText, objectText, range)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = actionText .. "Prompt"
+	prompt.ActionText = actionText
+	prompt.ObjectText = objectText
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = range or 12
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = parent
+	return prompt
+end
+
+-- The Gacha Machine by the cafeteria: a red cabinet with a glass dome full
+-- of colourful capsules. Press E to roll a random brainrot for $1,000.
+local function buildGachaMachine()
+	local machine = Instance.new("Folder")
+	machine.Name = "GachaMachine"
+	machine.Parent = workspace
+	local body = part("GachaBody", Vector3.new(6, 7, 5), Vector3.new(-78, GROUND + 3.5, -52), Color3.fromRGB(230, 70, 70), Enum.Material.SmoothPlastic, machine)
+	body.CFrame = CFrame.new(-78, GROUND + 3.5, -52) * CFrame.Angles(0, math.rad(20), 0)
+	local dome = part("GachaDome", Vector3.new(5.2, 5.2, 5.2), Vector3.new(-78, GROUND + 9.5, -52), Color3.fromRGB(200, 230, 255), Enum.Material.Glass, machine, Enum.PartType.Ball)
+	dome.Transparency = 0.3
+	-- Capsules tumbling inside the dome.
+	local capsuleColors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 200, 60), Color3.fromRGB(90, 200, 120), Color3.fromRGB(90, 150, 255), Color3.fromRGB(200, 120, 255) }
+	for i, capsuleColor in ipairs(capsuleColors) do
+		part("Capsule", Vector3.new(1.1, 1.1, 1.1), Vector3.new(-79.5 + (i % 3) * 1.5, GROUND + 8.5 + math.floor(i / 3) * 1.4, -52.5 + (i % 2) * 1.2), capsuleColor, Enum.Material.Neon, machine, Enum.PartType.Ball)
+	end
+	-- Rainbow stripes across the front.
+	local stripeColors = { Color3.fromRGB(255, 200, 60), Color3.fromRGB(90, 200, 120), Color3.fromRGB(90, 150, 255) }
+	for i, stripeColor in ipairs(stripeColors) do
+		part("Stripe", Vector3.new(5.5, 0.7, 0.3), Vector3.new(-78, GROUND + 4.5 + i * 0.8, -49.4), stripeColor, Enum.Material.Neon, machine)
+	end
+	part("Dispenser", Vector3.new(2.5, 2, 0.6), Vector3.new(-78, GROUND + 1.2, -49.4), Color3.fromRGB(60, 60, 70), Enum.Material.SmoothPlastic, machine)
+	local sign = part("GachaSign", Vector3.new(8, 2.5, 0.6), Vector3.new(-78, GROUND + 13, -52), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, machine)
+	textOn(sign, "GACHA  $1000", Color3.fromRGB(220, 60, 60), 32)
+	return interactPrompt(body, "GACHA", "Gacha Machine", 12)
+end
+
+-- The Fuse Lab by the gym: a white lab with a glowing purple fusion tube.
+-- Press E to fuse three brainrots of one tier into one of the next tier.
+local function buildFuseLab()
+	local lab = Instance.new("Folder")
+	lab.Name = "FuseLab"
+	lab.Parent = workspace
+	part("LabHall", Vector3.new(12, 9, 9), Vector3.new(78, GROUND + 4.5, 52), Color3.fromRGB(240, 240, 245), Enum.Material.SmoothPlastic, lab)
+	part("LabRoof", Vector3.new(13, 1, 10), Vector3.new(78, GROUND + 9.5, 52), Color3.fromRGB(150, 90, 220), Enum.Material.SmoothPlastic, lab)
+	local tube = part("FusionTube", Vector3.new(3.5, 7, 3.5), Vector3.new(78, GROUND + 3.5, 46.5), Color3.fromRGB(170, 90, 255), Enum.Material.Neon, lab, Enum.PartType.Cylinder)
+	tube.CFrame = CFrame.new(78, GROUND + 3.5, 46.5) * CFrame.Angles(0, 0, math.rad(90))
+	tube.Transparency = 0.25
+	-- Two bubbling beakers on the counter.
+	local beakerGreen = part("Beaker", Vector3.new(1.4, 2.4, 1.4), Vector3.new(74, GROUND + 1.2, 46.5), Color3.fromRGB(90, 230, 120), Enum.Material.Neon, lab, Enum.PartType.Cylinder)
+	beakerGreen.CFrame = CFrame.new(74, GROUND + 1.2, 46.5) * CFrame.Angles(0, 0, math.rad(90))
+	local beakerBlue = part("Beaker", Vector3.new(1.4, 2.4, 1.4), Vector3.new(82, GROUND + 1.2, 46.5), Color3.fromRGB(90, 180, 255), Enum.Material.Neon, lab, Enum.PartType.Cylinder)
+	beakerBlue.CFrame = CFrame.new(82, GROUND + 1.2, 46.5) * CFrame.Angles(0, 0, math.rad(90))
+	part("Counter", Vector3.new(12, 1, 2), Vector3.new(78, GROUND + 0.5, 46.5), Color3.fromRGB(200, 200, 210), Enum.Material.SmoothPlastic, lab)
+	local sign = part("FuseSign", Vector3.new(10, 2.5, 0.6), Vector3.new(78, GROUND + 7.5, 47.4), Color3.fromRGB(60, 40, 100), Enum.Material.SmoothPlastic, lab)
+	textOn(sign, "FUSE LAB", Color3.fromRGB(220, 180, 255), 32)
+	local body = lab:FindFirstChild("LabHall")
+	return interactPrompt(body, "FUSE", "Fuse Lab", 12)
+end
+
+-- Benches and swings around the school field. Every seat has a Press [E] SIT
+-- prompt; sitting rests the student and grants the Fresh income buff.
+local function buildArenaSeats()
+	local seatsFolder = Instance.new("Folder")
+	seatsFolder.Name = "ArenaSeats"
+	seatsFolder.Parent = workspace
+	local seats = {}
+
+	local function addBench(x, z, facing)
+		local seatPart = part("BenchSeat", Vector3.new(5, 0.6, 2), Vector3.new(x, GROUND + 1.2, z), Color3.fromRGB(180, 130, 70), Enum.Material.Wood, seatsFolder)
+		local backOffset = Vector3.new(-facing.X * 1, 0, -facing.Z * 1)
+		part("BenchBack", Vector3.new(5, 2.2, 0.4), Vector3.new(x + backOffset.X, GROUND + 2.6, z + backOffset.Z), Color3.fromRGB(160, 110, 60), Enum.Material.Wood, seatsFolder)
+		for _, legX in ipairs({ -2, 2 }) do
+			part("BenchLeg", Vector3.new(0.5, 1, 1.8), Vector3.new(x + legX, GROUND + 0.5, z), Color3.fromRGB(120, 85, 50), Enum.Material.Wood, seatsFolder)
+		end
+		local prompt = interactPrompt(seatPart, "SIT", "Bench", 8)
+		table.insert(seats, {
+			kind = "Bench",
+			part = seatPart,
+			prompt = prompt,
+			sitPosition = Vector3.new(x, GROUND + 3.3, z),
+			sitLook = facing,
+		})
+	end
+
+	local function addSwingSet(x, z, facing)
+		-- An A-frame with a top bar and two hanging seats.
+		local topBar = part("SwingBar", Vector3.new(9, 0.5, 0.5), Vector3.new(x, GROUND + 7, z), Color3.fromRGB(120, 85, 50), Enum.Material.Wood, seatsFolder)
+		topBar.CFrame = CFrame.new(x, GROUND + 7, z)
+		for _, side in ipairs({ -4, 4 }) do
+			local pole = part("SwingPole", Vector3.new(0.5, 7.5, 0.5), Vector3.new(x + side, GROUND + 3.5, z), Color3.fromRGB(120, 85, 50), Enum.Material.Wood, seatsFolder)
+			pole.CFrame = CFrame.new(x + side, GROUND + 3.5, z) * CFrame.Angles(0, 0, math.rad(side * -4))
+		end
+		for _, offset in ipairs({ -2.2, 2.2 }) do
+			local seatX = x + offset
+			for _, chainOffset in ipairs({ -0.9, 0.9 }) do
+				part("SwingChain", Vector3.new(0.15, 4.4, 0.15), Vector3.new(seatX + chainOffset, GROUND + 4.8, z), Color3.fromRGB(180, 180, 190), Enum.Material.Metal, seatsFolder)
+			end
+			local seatPart = part("SwingSeat", Vector3.new(2.2, 0.4, 1.2), Vector3.new(seatX, GROUND + 2.4, z), Color3.fromRGB(200, 90, 90), Enum.Material.SmoothPlastic, seatsFolder)
+			local prompt = interactPrompt(seatPart, "SIT", "Swing", 8)
+			table.insert(seats, {
+				kind = "Swing",
+				part = seatPart,
+				prompt = prompt,
+				sitPosition = Vector3.new(seatX, GROUND + 4.2, z),
+				sitLook = facing,
+			})
+		end
+	end
+
+	-- Four benches around the field, facing the game.
+	addBench(-40, 44, Vector3.new(0, 0, -1))
+	addBench(40, 44, Vector3.new(0, 0, -1))
+	addBench(-40, -24, Vector3.new(0, 0, 1))
+	addBench(40, -24, Vector3.new(0, 0, 1))
+	-- Two swing sets on the field's flanks, facing the field.
+	addSwingSet(-58, 10, Vector3.new(1, 0, 0))
+	addSwingSet(58, 10, Vector3.new(-1, 0, 0))
+	return seats
+end
+
 function WorldBuilder.Build()
 	if world then
 		return world
@@ -416,6 +542,9 @@ function WorldBuilder.Build()
 	world = {
 		bases = bases,
 		highPads = buildHighPads(),
+		gachaPrompt = buildGachaMachine(),
+		fusePrompt = buildFuseLab(),
+		seats = buildArenaSeats(),
 		paradeStart = Vector3.new(-80, GROUND + 1.6, -60),
 		paradeEnd = Vector3.new(80, GROUND + 1.6, -60),
 		treeTop = Vector3.new(-112, GROUND + 39, 35),
@@ -435,6 +564,18 @@ end
 
 function WorldBuilder.GetBase(index)
 	return world and world.bases[index] or nil
+end
+
+function WorldBuilder.GetGachaPrompt()
+	return world and world.gachaPrompt or nil
+end
+
+function WorldBuilder.GetFusePrompt()
+	return world and world.fusePrompt or nil
+end
+
+function WorldBuilder.GetSeats()
+	return world and world.seats or {}
 end
 
 -- Is this point inside one of the classroom bases? The hazard and the safe

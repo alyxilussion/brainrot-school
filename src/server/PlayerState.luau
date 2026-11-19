@@ -27,6 +27,8 @@ local function newState(player, baseIndex)
 		lockReadyAt = 0, -- lock can be used again after this timestamp
 		shieldUntil = 0, -- pull/push immunity while in the future
 		slowUntil = 0, -- pull slow effect while in the future
+		freshUntil = 0, -- Fresh buff (from sitting) while in the future
+		freshReadyAt = 0, -- the Fresh buff can be earned again after this timestamp
 		lastPullAt = -100,
 		lastPushAt = -100,
 		questChapter = 1,
@@ -97,14 +99,22 @@ function PlayerState.CountOwned(state)
 end
 
 -- Dollars per second the player's placed brainrots earn right now, before the
--- income tick adds it. Mutation, rebirth and Report Card bonuses all apply.
+-- income tick adds it. Mutation, rebirth, Report Card and Fresh bonuses apply.
 function PlayerState.ComputeIncome(state)
 	local base = 0
 	for _, record in pairs(state.placed) do
 		base += Catalog.MutatedIncome(Catalog.ById[record.catalogId], record.mutation)
 	end
 	local reportBonus = 1 + PlayerState.CountOwned(state) * Config.REPORT_CARD_BONUS_PER_ENTRY
-	return math.floor(base * state.multiplier * reportBonus)
+	local freshBonus = 1
+	if os.clock() < state.freshUntil then
+		freshBonus = Config.SIT_BUFF_MULTIPLIER
+	end
+	return math.floor(base * state.multiplier * reportBonus * freshBonus)
+end
+
+function PlayerState.IsFresh(state)
+	return os.clock() < state.freshUntil
 end
 
 -- The snapshot the HUD needs. Sent every income tick and after every action.
@@ -117,6 +127,17 @@ function PlayerState.Snapshot(state)
 	for _ in pairs(state.placed) do
 		placedCount += 1
 	end
+	-- The Fuse UI needs the placed brainrots themselves, not just the count.
+	local placedList = {}
+	for pedestalId, record in pairs(state.placed) do
+		table.insert(placedList, {
+			pedestalId = pedestalId,
+			catalogId = record.catalogId,
+			name = record.name,
+			rarity = record.rarity,
+			mutation = record.mutation,
+		})
+	end
 	return {
 		cash = state.cash,
 		income = PlayerState.ComputeIncome(state),
@@ -126,6 +147,7 @@ function PlayerState.Snapshot(state)
 		carriedCount = #state.carried,
 		carryCapacity = PlayerState.GetCarryCapacity(state),
 		placedCount = placedCount,
+		placed = placedList,
 		ownedCount = PlayerState.CountOwned(state),
 		ownedTotal = Catalog.Count,
 		owned = state.owned,
@@ -133,6 +155,9 @@ function PlayerState.Snapshot(state)
 		locked = PlayerState.IsLocked(state),
 		lockSecondsLeft = math.max(0, math.ceil(state.lockUntil - os.clock())),
 		lockReadyIn = math.max(0, math.ceil(state.lockReadyAt - os.clock())),
+		fresh = PlayerState.IsFresh(state),
+		freshSecondsLeft = math.max(0, math.ceil(state.freshUntil - os.clock())),
+		freshReadyIn = math.max(0, math.ceil(state.freshReadyAt - os.clock())),
 		questChapter = state.questChapter,
 		questStep = state.questStep,
 		questProgress = state.questProgress,
