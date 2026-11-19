@@ -1,21 +1,50 @@
-# roblox-brainrot-01 starter
+# Brainrot School: Enchanted Academy
 
-A working entry for make.fun's "Make the best AI Roblox brainrot game" bounty (roblox-brainrot-01), laid out as your
-repository: a Rojo project whose game is a grey square that moves with the arrow keys. It is a starting point, not a
-winner, and not yet the 3D game the bounty asks for: its square is drawn on the screen, not in Roblox's 3D world.
+A Roblox brainrot game for make.fun's roblox-brainrot-01 bounty: a magic forest
+school where students collect absurd school-themed brainrots, carry them home
+to their classroom, and climb a ladder of rarities, mutations and rebirths —
+while rivals pull, push and steal, a lunch rush stampedes the field, and a
+naughty crow raids unlocked classrooms.
 
-- `main.ts` (Node 22, standard library only) hands the game in: it copies `game.rbxl`, `src/`, `screenshots/` and
-  `PLAY.json` to `/output`, leaving out every name that starts with a dot (such as `.gitkeep` or `.DS_Store`, which
-  fail an entry), and writes `/output/dossier.json` with `vendor/makefun-roblox.ts`, the kit's copy, unchanged.
-- `game.rbxl` is the place Rojo builds from `src/` and `default.project.json`; `screenshots/` holds three captures of
-  it; `PLAY.json` names no place yet, so the gate refuses the starter as it stands until it names your published one.
-- One of your screenshots must also be your game's first thumbnail on Roblox: the same picture, uploaded on the
-  Creator Dashboard with your game's icon.
-- `TOUR.json` is an example of the optional tour: for each screenshot, the keys that bring the game to that screen.
+## The game
 
-Run it as the grader does, writing `out/` in place of `/output`:
+- **Loop:** brainrots walk the Parade Lane in front of the academy — click one
+  to buy it, carry it home, place it on a pedestal in your classroom, and watch
+  the money tick. Buy the next tier, then the next.
+- **Cast:** 40 original brainrots in 8 rarities (Common to Secret), each with
+  a name, a rarity colour and a dollars-per-second label. Mutations multiply
+  income: GOLD x2, DIAMOND x3, LAVA x4, RAINBOW x6, GLITCH x10.
+- **PvP:** PULL [Q] yanks a carrier toward you and slows them; PUSH [F] shoves
+  a carrier and can knock their brainrot loose ("DROPPED!"); STEAL [E] takes a
+  brainrot off a rival's unlocked base. Your own classroom is a safe zone.
+- **Quests:** three chapters (Murid Baru, Naik Kelas, Bintang Sekolah) plus
+  three rotating daily quests, all paying cash, with a QUEST DONE! banner.
+- **Events:** the LUNCH RUSH! stampede every 90 seconds and Gagak Nakal, the
+  crow thief, every 2 minutes. A base lock [L] shields you from both.
+- **Progression:** rebirths (+1x income each), five upgrades (speed, bag,
+  lock, slots, luck), and a 40-entry Report Card with an income bonus.
+- **Arena:** rare brainrots spawn only on high places — the gym climbing wall,
+  the big tree, the academy tower — so players meet where the PvP happens.
 
+## Layout
+
+- `src/server/` — one module per system (world, spawning, carrying, stealing,
+  pull/push, quests, hazard, crow, rebirth, upgrades, income, lock, state).
+  The server owns all state; the client only renders and asks.
+- `src/client/Game.client.luau` — the HUD (money top-centre, quests on the
+  right, lock/rebirth/report-card/upgrades at the bottom) and the key bindings
+  through ContextActionService.
+- `src/shared/` — the catalog, tuning, quest and upgrade data both sides read.
+- `default.project.json` — the Rojo project; `game.rbxl` is built from it.
+  The whole 3D school is built from code by WorldBuilder when the server
+  starts: no Studio-pasted models.
+
+## Build and check
+
+    rojo build default.project.json --output game.rbxl
     mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-The rules are on the bounty's page (/bounty/roblox-brainrot-01) and in the kit's RULES.txt,
-which gives every command in order (Before you submit, then Enter).
+`main.ts` (Node 22, standard library only) copies `game.rbxl`, `src/`,
+`screenshots/` and `PLAY.json` to the output directory and writes
+`dossier.json` with the vendored make.fun library. `PLAY.json` names the
+published place once the owner has published it from Studio.

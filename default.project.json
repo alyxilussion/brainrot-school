@@ -1,5 +1,5 @@
 {
-  "name": "house-dodge",
+  "name": "brainrot-school",
   "tree": {
     "$className": "DataModel",
     "Players": {
@@ -10,6 +10,11 @@
     "ServerScriptService": {
       "Server": {
         "$path": "src/server"
+      }
+    },
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
       }
     },
     "StarterPlayer": {
@@ -49,11 +54,11 @@
     "Lighting": {
       "$properties": {
         "Ambient": [
-          0,
-          0,
-          0
+          0.4,
+          0.4,
+          0.45
         ],
-        "Brightness": 2,
+        "Brightness": 3,
         "GlobalShadows": true,
         "Outlines": false,
         "Technology": "Voxel"
