@@ -1,132 +1,137 @@
--- QuestSystem: chapters and daily quests. Other systems report events here
--- (bought, placed, stole, pulled, pushed, locked, rebirthed, earned) and this
--- module counts them, pays rewards, and tells the player with a QUEST DONE!
--- banner. Chapter progress lives in PlayerState; definitions in QuestCatalog.
+-- QuestSystem: four story chapters (each step counts from when it starts)
+-- and a three-slot Bonus Board that refills with harder quests. Events come
+-- in from every system through QuestSystem.OnEvent(state, key, amount); the
+-- Hud gets a ready-to-draw view inside StateUpdate.
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Config = require(Shared.Config)
 local QuestCatalog = require(Shared.QuestCatalog)
-local PlayerState = require(script.Parent.PlayerState)
-local RemoteHub = require(script.Parent.RemoteHub)
 
 local QuestSystem = {}
 
-local function notify(player, text, kind)
-	local event = RemoteHub.Get("Notify")
-	if event then
-		event:FireClient(player, text, kind or "info")
+local G
+
+function QuestSystem.Setup(state)
+	local bonus = {}
+	for slot = 1, QuestCatalog.BONUS_SLOTS do
+		bonus[slot] = { poolIndex = slot, progress = 0 }
+	end
+	state.quest = {
+		chapter = 1,
+		step = 1,
+		progress = 0,
+		bonus = bonus,
+		nextPool = QuestCatalog.BONUS_SLOTS + 1,
+	}
+	QuestSystem.SyncCounters(state)
+end
+
+local function currentStep(quest)
+	local chapter = QuestCatalog.CHAPTERS[quest.chapter]
+	return chapter and chapter.steps[quest.step] or nil, chapter
+end
+
+-- Counters that are a level, not an event, read straight from state.
+function QuestSystem.SyncCounters(state)
+	local quest = state.quest
+	local step = quest and currentStep(quest)
+	if step and step.key == "ownedCount" then
+		quest.progress = state.ownedCount
+		QuestSystem.CheckChapter(state)
 	end
 end
 
-local function dayOfYear()
-	return tonumber(os.date("%j"))
+local function reward(state, amount, title)
+	G.Economy.AddCash(state, amount, "quest")
+	G.notify(state, "Quest done: " .. title .. "  +" .. Config.FormatMoney(amount), Color3.fromRGB(255, 220, 90))
+	G.fx("sound", "quest", nil, state)
 end
 
--- Resets the daily counters when the calendar day has changed.
-local function ensureDailyDay(state)
-	local today = dayOfYear()
-	if state.dailyDay ~= today then
-		state.dailyDay = today
-		state.dailyProgress = {}
-		state.dailyDone = {}
-	end
-end
-
-local function currentStep(state)
-	local chapter = QuestCatalog.CHAPTERS[state.questChapter]
-	if not chapter then
-		return nil
-	end
-	return chapter.steps[state.questStep]
-end
-
-local function payReward(player, state, amount, label)
-	PlayerState.AddCash(state, amount)
-	notify(player, "QUEST DONE! " .. label .. "  +$" .. amount, "quest")
-end
-
--- Checks the current chapter step and all of today's daily quests for
--- completion. Called after every event; loops so a big jump pays each step.
-local function checkCompletions(player, state)
-	ensureDailyDay(state)
-	-- Chapter steps.
-	while true do
-		local step = currentStep(state)
-		if not step then
-			break
+function QuestSystem.CheckChapter(state)
+	local quest = state.quest
+	local step, chapter = currentStep(quest)
+	while step and quest.progress >= step.target do
+		reward(state, step.reward, step.text)
+		quest.step += 1
+		quest.progress = 0
+		if quest.step > #chapter.steps then
+			state.chaptersDone += 1
+			G.banner("CHAPTER COMPLETE: " .. string.upper(chapter.title) .. " · +5% INCOME FOREVER", Color3.fromRGB(255, 190, 40), 5, state)
+			quest.chapter += 1
+			quest.step = 1
 		end
-		local progress = state.questProgress[step.key] or 0
-		if step.key == "ownedCount" then
-			progress = PlayerState.CountOwned(state)
-		end
-		if progress < step.target then
-			break
-		end
-		payReward(player, state, step.reward, step.text)
-		state.questStep += 1
-		local chapter = QuestCatalog.CHAPTERS[state.questChapter]
-		if state.questStep > #chapter.steps then
-			state.questChapter += 1
-			state.questStep = 1
-			if state.questChapter > #QuestCatalog.CHAPTERS then
-				notify(player, "You finished every chapter! Bintang Sekolah!", "quest")
-				state.questChapter = #QuestCatalog.CHAPTERS
-				state.questStep = #chapter.steps + 1
-				break
-			else
-				local nextChapter = QuestCatalog.CHAPTERS[state.questChapter]
-				notify(player, "Chapter " .. state.questChapter .. ": " .. nextChapter.title .. "!", "quest")
-			end
-		end
-	end
-	-- Daily quests.
-	for _, daily in ipairs(QuestCatalog.GetDailyQuests(dayOfYear())) do
-		if not state.dailyDone[daily.key] then
-			local progress = state.dailyProgress[daily.key] or 0
-			if progress >= daily.target then
-				state.dailyDone[daily.key] = true
-				payReward(player, state, daily.reward, daily.text)
-			end
+		step, chapter = currentStep(quest)
+		if step and step.key == "ownedCount" then
+			quest.progress = state.ownedCount
 		end
 	end
 end
 
--- One game event. `data` carries extras: amount for "earned", rarity for "bought".
-function QuestSystem.OnEvent(player, event, data)
-	local state = PlayerState.Get(player)
-	if not state then
+function QuestSystem.OnEvent(state, key, amount)
+	if not state or state.isBot or not state.quest then
 		return
 	end
-	data = data or {}
-	ensureDailyDay(state)
-
-	-- Chapter counters.
-	if event == "earned" then
-		state.questProgress.earned = (state.questProgress.earned or 0) + (data.amount or 0)
-	else
-		state.questProgress[event] = (state.questProgress[event] or 0) + 1
+	local quest = state.quest
+	local step = currentStep(quest)
+	if step and step.key == key then
+		quest.progress += amount
+		QuestSystem.CheckChapter(state)
 	end
-	if event == "pulled" or event == "pushed" then
-		state.questProgress.grappled = (state.questProgress.grappled or 0) + 1
-	end
-
-	-- Daily counters mirror the chapter ones under daily keys.
-	if event == "bought" then
-		state.dailyProgress.dailyBuy = (state.dailyProgress.dailyBuy or 0) + 1
-		local rank = QuestCatalog.RARITY_RANK[data.rarity] or 1
-		if rank >= QuestCatalog.RARITY_RANK.Rare then
-			state.dailyProgress.dailyRare = (state.dailyProgress.dailyRare or 0) + 1
+	for slot, entry in ipairs(quest.bonus) do
+		local definition = QuestCatalog.GetBonusQuest(entry.poolIndex)
+		if definition.key == key then
+			entry.progress += amount
+			if entry.progress >= definition.target then
+				reward(state, definition.reward, definition.text)
+				quest.bonus[slot] = { poolIndex = quest.nextPool, progress = 0 }
+				quest.nextPool += 1
+			end
 		end
-	elseif event == "placed" then
-		state.dailyProgress.dailyPlace = (state.dailyProgress.dailyPlace or 0) + 1
-	elseif event == "stole" then
-		state.dailyProgress.dailySteal = (state.dailyProgress.dailySteal or 0) + 1
-	elseif event == "earned" then
-		state.dailyProgress.dailyEarn = (state.dailyProgress.dailyEarn or 0) + (data.amount or 0)
-	elseif event == "pulled" or event == "pushed" then
-		state.dailyProgress.dailyGrapple = (state.dailyProgress.dailyGrapple or 0) + 1
 	end
+	QuestSystem.SyncCounters(state)
+	G.State.Changed(state)
+end
 
-	checkCompletions(player, state)
+-- What the Hud draws: the live chapter step and the three bonus quests.
+function QuestSystem.View(state)
+	local quest = state.quest
+	if not quest then
+		return nil
+	end
+	local step, chapter = currentStep(quest)
+	local view = {
+		chapterIndex = quest.chapter,
+		chapterCount = #QuestCatalog.CHAPTERS,
+		chaptersDone = state.chaptersDone,
+		bonus = {},
+	}
+	if step then
+		view.chapterTitle = chapter.title
+		view.stepIndex = quest.step
+		view.stepCount = #chapter.steps
+		view.text = step.text
+		view.progress = math.min(quest.progress, step.target)
+		view.target = step.target
+		view.reward = step.reward
+	else
+		view.chapterTitle = "Graduated!"
+		view.text = "All chapters done. Bonus Board keeps going."
+		view.done = true
+	end
+	for _, entry in ipairs(quest.bonus) do
+		local definition = QuestCatalog.GetBonusQuest(entry.poolIndex)
+		table.insert(view.bonus, {
+			text = definition.text,
+			progress = math.min(entry.progress, definition.target),
+			target = definition.target,
+			reward = definition.reward,
+		})
+	end
+	return view
+end
+
+function QuestSystem.Init(context)
+	G = context
 end
 
 return QuestSystem

@@ -1,9 +1,8 @@
 -- BrainrotCatalog: the 60 original brainrots of Brainrot School.
--- 15 tiers x 4, every name school- or forest-themed, every character built
--- from code (no downloaded models). Income is dollars per second at 1x and
--- roughly doubles every tier, from $5/s at tier 1 to $80,000/s at tier 15;
--- the buy price is twelve times the income. The client reads this too, for
--- the Report Card grid and the HUD.
+-- 15 tiers x 4, every name school- or forest-themed (Indonesian puns), every
+-- character built from Parts by BrainrotFactory. Income is dollars per second
+-- at 1x and roughly doubles every tier, $5/s up to $131K/s; the buy price is
+-- twelve times the income. The client reads it for the Report Card grid.
 
 local Config = require(script.Parent.Config)
 
@@ -99,20 +98,15 @@ for _, entry in ipairs(ENTRIES) do
 	byRarity[entry.rarity] = byRarity[entry.rarity] or {}
 	table.insert(byRarity[entry.rarity], entry)
 end
-
 Catalog.ById = byId
 Catalog.ByRarity = byRarity
 
 -- The tier above this one, or nil at the top of the ladder (PRINCIPAL).
-function Catalog.NextTier(rarity)
-	local index = table.find(Config.RARITY_ORDER, rarity)
-	if not index then
-		return nil
-	end
-	return Config.RARITY_ORDER[index + 1]
+function Catalog.NextTier(rarity) -- Fuse Lab: next of 15 tiers
+	local rank = Config.RARITY_RANK[rarity]
+	return rank and Config.RARITY_ORDER[rank + 1] or nil
 end
 
--- Picks a random brainrot of one tier, using the caller's Random.
 function Catalog.GetRandomOfRarity(rarity, rng)
 	local pool = byRarity[rarity]
 	if not pool or #pool == 0 then
@@ -129,57 +123,63 @@ function Catalog.RollTier(rng, weights)
 	end
 	local roll = rng:NextNumber(0, total)
 	for _, rarity in ipairs(Config.RARITY_ORDER) do
-		roll -= weights[rarity] or 0
-		if roll <= 0 then
-			return rarity
+		local weight = weights[rarity] or 0
+		if weight > 0 then
+			roll -= weight
+			if roll <= 0 then
+				return rarity
+			end
 		end
 	end
 	return "Common"
 end
 
--- Weighted rarity roll for the parade. Luck levels shift weight from Common
--- toward the rare end; the top tier is never boosted.
-function Catalog.RollRarity(rng, luckLevels)
-	local weights = {}
+-- Luck shifts weight from Common toward the rare end; the top tier stays rare.
+function Catalog.ApplyLuck(weights, luckLevels)
+	local tilted = {}
 	for _, rarity in ipairs(Config.RARITY_ORDER) do
-		local weight = Config.RARITY_WEIGHTS[rarity]
+		local weight = weights[rarity] or 0
 		if rarity == "Common" then
-			weight = weight * math.max(0.2, 1 - 0.25 * luckLevels)
+			weight *= math.max(0.2, 1 - 0.25 * luckLevels)
 		elseif rarity ~= "PRINCIPAL" then
-			weight = weight * (1 + 0.3 * luckLevels)
+			weight *= 1 + 0.3 * luckLevels
 		end
-		weights[rarity] = weight
+		tilted[rarity] = weight
 	end
-	return Catalog.RollTier(rng, weights)
+	return tilted
+end
+
+function Catalog.RollRarity(rng, luckLevels)
+	return Catalog.RollTier(rng, Catalog.ApplyLuck(Config.RARITY_WEIGHTS, luckLevels or 0))
 end
 
 -- Mutation roll, rarest first. Returns nil for a plain brainrot.
 function Catalog.RollMutation(rng, luckLevels)
 	for _, roll in ipairs(Config.MUTATION_ROLLS) do
-		local chance = roll.chance * (1 + 0.5 * luckLevels)
-		if rng:NextNumber() < chance then
+		if rng:NextNumber() < roll.chance * (1 + 0.5 * (luckLevels or 0)) then
 			return roll.name
 		end
 	end
 	return nil
 end
 
--- A uniformly random mutation name, for a tier-15 fuse result.
+-- A random mutation name, for a top-tier fuse result. Sorted for determinism.
 function Catalog.RandomMutation(rng)
 	local names = {}
 	for name in pairs(Config.MUTATIONS) do
 		table.insert(names, name)
 	end
+	table.sort(names)
 	return names[rng:NextInteger(1, #names)]
 end
 
 -- The income a brainrot actually pays, after its mutation multiplier.
 function Catalog.MutatedIncome(entry, mutation)
-	local mult = 1
-	if mutation and Config.MUTATIONS[mutation] then
-		mult = Config.MUTATIONS[mutation].multiplier
+	if not entry then
+		return 0
 	end
-	return entry.income * mult
+	local mutationInfo = mutation and Config.MUTATIONS[mutation]
+	return entry.income * (mutationInfo and mutationInfo.multiplier or 1)
 end
 
 return Catalog

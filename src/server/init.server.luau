@@ -1,130 +1,262 @@
--- Bootstrap for Brainrot School: Enchanted Academy.
--- Builds the remotes, builds the world from code, wires the systems together,
--- starts every loop, and hands each joining student a classroom. The server
--- owns all state; the client only renders and asks.
+-- Server: boots Brainrot School: Enchanted Academy. Builds the remotes and
+-- the school, wires every system to one shared context, gives each student
+-- a classroom (taking one back from a rival when needed), spawns and
+-- respawns them there, and streams each student's state to their Hud.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
-local RemoteHub = require(script.RemoteHub)
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Catalog = require(Shared.BrainrotCatalog)
+
 local WorldBuilder = require(script.WorldBuilder)
+local BrainrotFactory = require(script.BrainrotFactory)
 local PlayerState = require(script.PlayerState)
-local Spawner = require(script.Spawner)
 local CarrySystem = require(script.CarrySystem)
 local StealSystem = require(script.StealSystem)
 local PullPushSystem = require(script.PullPushSystem)
 local QuestSystem = require(script.QuestSystem)
-local HazardSystem = require(script.HazardSystem)
-local CrowThiefSystem = require(script.CrowThiefSystem)
-local RebirthSystem = require(script.RebirthSystem)
-local UpgradeSystem = require(script.UpgradeSystem)
-local LockSystem = require(script.LockSystem)
-local IncomeTicker = require(script.IncomeTicker)
-local SitSystem = require(script.SitSystem)
-local GachaSystem = require(script.GachaSystem)
-local FuseSystem = require(script.FuseSystem)
+local ParadeSpawner = require(script.ParadeSpawner)
+local EconomySystem = require(script.EconomySystem)
+local ThreatSystem = require(script.ThreatSystem)
+local RivalSystem = require(script.RivalSystem)
 
--- Order matters: remotes first (systems fetch them on use), then the world
--- (systems read bases and pads from it), then the wiring, then the loops.
-local remotes = RemoteHub.Build()
-WorldBuilder.Build()
+Players.CharacterAutoLoads = true
+Players.RespawnTime = 3
 
--- A placed brainrot gets its steal prompt from StealSystem, wired here so
--- CarrySystem never has to require StealSystem back (no require cycle).
-CarrySystem.OnPlaced = StealSystem.CreatePrompt
-Spawner.RegisterBuyHandler(CarrySystem.TryBuyParade)
-Spawner.RegisterGrabHandler(CarrySystem.TryGrabHighPad)
-
-Spawner.Start()
-CarrySystem.Start()
-HazardSystem.Start()
-CrowThiefSystem.Start()
-IncomeTicker.Start()
-SitSystem.Start()
-GachaSystem.Start()
-FuseSystem.Start()
-
--- Key-press actions arrive by remote; clicks and prompts fire server-side.
-remotes.PullPlayer.OnServerEvent:Connect(function(player)
-	PullPushSystem.TryPull(player)
-end)
-remotes.PushPlayer.OnServerEvent:Connect(function(player)
-	PullPushSystem.TryPush(player)
-end)
-remotes.ToggleLock.OnServerEvent:Connect(function(player)
-	LockSystem.TryToggleLock(player)
-end)
-remotes.DoRebirth.OnServerEvent:Connect(function(player)
-	RebirthSystem.TryRebirth(player)
-end)
-remotes.BuyUpgrade.OnServerEvent:Connect(function(player, upgradeId)
-	UpgradeSystem.TryBuyUpgrade(player, upgradeId)
-end)
-remotes.RollGacha.OnServerEvent:Connect(function(player)
-	GachaSystem.TryRoll(player)
-end)
-remotes.FuseBrainrots.OnServerEvent:Connect(function(player, pedestalIds)
-	FuseSystem.TryFuse(player, pedestalIds)
-end)
-
-local function firstFreeBase()
-	for _, base in ipairs(WorldBuilder.GetBases()) do
-		if not base.owner then
-			return base
+-- Remotes: exactly the names in Config.REMOTES.
+local function createRemotes()
+	local folder = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
+	folder.Name = "Remotes"
+	local remotes = {}
+	for _, group in pairs(Config.REMOTES) do
+		for _, name in ipairs(group) do
+			local remote = folder:FindFirstChild(name) or Instance.new("RemoteEvent")
+			remote.Name = name
+			remote.Parent = folder
+			remotes[name] = remote
 		end
 	end
-	return nil
+	folder.Parent = ReplicatedStorage
+	return remotes
+end
+
+local remotes = createRemotes()
+WorldBuilder.SetupLighting(Lighting)
+WorldBuilder.Build(Workspace)
+
+-- The shared context every system receives in Init.
+local G = {
+	Remotes = remotes,
+	World = WorldBuilder,
+	Factory = BrainrotFactory,
+	State = PlayerState,
+	Carry = CarrySystem,
+	Steal = StealSystem,
+	PullPush = PullPushSystem,
+	Quests = QuestSystem,
+	Parade = ParadeSpawner,
+	Economy = EconomySystem,
+	Threats = ThreatSystem,
+	Rivals = RivalSystem,
+}
+
+function G.notify(state, text, color)
+	if state and not state.isBot and state.player and state.player.Parent then
+		remotes.Notify:FireClient(state.player, text, color)
+	end
+end
+
+-- Full-width event banner, for everyone or for one student.
+function G.banner(text, color, seconds, state)
+	if state then
+		if not state.isBot and state.player and state.player.Parent then
+			remotes.EventBanner:FireClient(state.player, text, color, seconds)
+		end
+		return
+	end
+	remotes.EventBanner:FireAllClients(text, color, seconds)
+end
+
+-- Effects: tether, shockwave, floating text, sounds. A sound may be private.
+function G.fx(kind, a, b, c)
+	if kind == "sound" and type(c) == "table" then
+		if not c.isBot and c.player and c.player.Parent then
+			remotes.Fx:FireClient(c.player, kind, a, b)
+		end
+		return
+	end
+	remotes.Fx:FireAllClients(kind, a, b, c)
+end
+
+local systems: { any } = { CarrySystem, StealSystem, PullPushSystem, QuestSystem, EconomySystem, ParadeSpawner, ThreatSystem, RivalSystem }
+for _, system in ipairs(systems) do
+	system.Init(G)
+end
+
+local function now()
+	return Workspace:GetServerTimeNow()
+end
+
+-- Everything the Hud draws, in one table.
+local function buildStatePayload(state)
+	local t = now()
+	local base = state.baseIndex and WorldBuilder.GetBase(state.baseIndex)
+	local carrying = {}
+	for _, record in ipairs(state.carrying) do
+		table.insert(carrying, { name = record.name, rarity = record.rarity, mutation = record.mutation })
+	end
+	local placed, tierCounts = {}, {}
+	for _, record in pairs(state.placed) do
+		table.insert(placed, { id = record.catalogId, mutation = record.mutation })
+		tierCounts[record.rarity] = (tierCounts[record.rarity] or 0) + 1
+	end
+	local owned = {}
+	for id in pairs(state.owned) do
+		table.insert(owned, id)
+	end
+	local upgradeCosts = {}
+	for id, level in pairs(state.upgrades) do
+		upgradeCosts[id] = Config.NextUpgradeCost(id, level) or 0
+	end
+	return {
+		cash = state.cash,
+		income = PlayerState.IncomePerSecond(state, t),
+		multiplier = PlayerState.Multiplier(state, t),
+		rebirths = state.rebirths,
+		rebirthCost = PlayerState.RebirthCost(state),
+		upgrades = state.upgrades,
+		upgradeCosts = upgradeCosts,
+		carrying = carrying,
+		capacity = PlayerState.CarryCapacity(state),
+		baseIndex = state.baseIndex,
+		baseCenter = base and base.center or nil,
+		placedCount = #placed,
+		slotCount = base and #base.pedestals or 0,
+		tierCounts = tierCounts,
+		owned = owned,
+		ownedCount = state.ownedCount,
+		catalogCount = Catalog.Count,
+		lockEndsAt = state.lockEndsAt,
+		lockReadyAt = state.lockReadyAt,
+		pullReadyAt = state.pullReadyAt,
+		pushReadyAt = state.pushReadyAt,
+		buffUntil = state.buffUntil,
+		quest = QuestSystem.View(state),
+	}
+end
+
+local function sendState(state)
+	state.dirty = false
+	remotes.StateUpdate:FireClient(state.player, buildStatePayload(state))
+end
+
+-- A classroom for a new student: a free one, else one taken back from a rival.
+local function assignBase(state)
+	for index = 1, Config.BASE_COUNT do
+		local base = WorldBuilder.GetBase(index)
+		if not base.owner then
+			return index
+		end
+	end
+	return RivalSystem.ReleaseBase()
+end
+
+local function spawnAtBase(state, character)
+	local base = state.baseIndex and WorldBuilder.GetBase(state.baseIndex)
+	if not base then
+		return
+	end
+	local stand = (base.cframe * CFrame.new(0, 3.5, -6)).Position
+	local door = base.door + Vector3.new(0, 3.5, 0)
+	character:PivotTo(CFrame.lookAt(stand, door))
+end
+
+local function onCharacterAdded(state, character)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	character:WaitForChild("HumanoidRootPart", 10)
+	task.wait()
+	spawnAtBase(state, character)
+	EconomySystem.ApplyWalkSpeed(state)
+	if humanoid then
+		humanoid.Died:Connect(function()
+			CarrySystem.DropAll(state, state.lastPosition)
+		end)
+	end
 end
 
 local function onPlayerAdded(player)
-	local base = firstFreeBase() or WorldBuilder.GetBase(1)
-	local state = PlayerState.Create(player, base.index)
-	WorldBuilder.SetBaseOwner(base, player)
+	local state = PlayerState.Create(player, { player = player, userId = player.UserId, name = player.DisplayName })
+	QuestSystem.Setup(state)
+	local index = assignBase(state)
+	if index then
+		local base = WorldBuilder.GetBase(index)
+		state.baseIndex = index
+		base.owner = state
+		WorldBuilder.SetBaseOwnerName(base, player.DisplayName)
+		StealSystem.RefreshBase(state)
+	end
 	player.CharacterAdded:Connect(function(character)
-		local humanoid = character:WaitForChild("Humanoid")
-		humanoid.WalkSpeed = UpgradeSystem.GetWalkSpeed(state)
-		-- CharacterAutoLoads is off, so the server must respawn the
-		-- student after every death; without this a death strands the
-		-- player with no character at all. Carried brainrots drop first.
-		humanoid.Died:Connect(function()
-			CarrySystem.DropAllCarried(player)
-			task.wait(2)
-			if PlayerState.Get(player) then
-				player:LoadCharacter()
-			end
-		end)
+		onCharacterAdded(state, character)
 	end)
-	-- CharacterAutoLoads is off in the project, so the server loads the
-	-- character once the student's record and classroom exist.
-	player:LoadCharacter()
-	task.delay(1, function()
-		if PlayerState.Get(player) then
-			PlayerState.PushUpdate(state)
+	player.CharacterRemoving:Connect(function()
+		if #state.carrying > 0 then
+			CarrySystem.DropAll(state, state.lastPosition)
 		end
 	end)
+	if player.Character then
+		task.spawn(onCharacterAdded, state, player.Character)
+	end
+	sendState(state)
+	G.notify(state, "Welcome to Classroom " .. tostring(index or "?") .. "! Buy a brainrot on the Parade Lane.", Color3.fromRGB(255, 220, 90))
 end
 
 local function onPlayerRemoving(player)
 	local state = PlayerState.Get(player)
-	CarrySystem.CleanupPlayer(player)
-	if state then
-		local base = WorldBuilder.GetBase(state.baseIndex)
-		if base and base.owner == player then
-			base.owner = nil
-			WorldBuilder.SetBaseLockVisual(base, false)
-			local label = base.signGui:FindFirstChildOfClass("TextLabel")
-			if label then
-				label.Text = "CLASSROOM " .. base.index
-			end
-		end
+	if not state then
+		return
+	end
+	CarrySystem.DropAll(state, state.lastPosition)
+	for _, record in pairs(table.clone(state.placed)) do
+		CarrySystem.Destroy(record)
+	end
+	local base = state.baseIndex and WorldBuilder.GetBase(state.baseIndex)
+	if base then
+		base.owner = nil
+		WorldBuilder.ResetPedestalRows(base)
+		WorldBuilder.SetBaseOwnerName(base, nil)
+		WorldBuilder.SetBaseLockVisual(base, false, 0)
 	end
 	PlayerState.Remove(player)
+	task.defer(RivalSystem.FillFreeBases, #Players:GetPlayers())
 end
 
 Players.PlayerAdded:Connect(onPlayerAdded)
 Players.PlayerRemoving:Connect(onPlayerRemoving)
--- Studio playtests sometimes start with a player already in the game.
 for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(onPlayerAdded, player)
 end
 
-print("Brainrot School is open for students.")
+-- Stream state: changed students at once, everyone at least once a second.
+task.spawn(function()
+	local tick = 0
+	while true do
+		task.wait(0.25)
+		tick += 1
+		for _, state in pairs(PlayerState.All()) do
+			if not state.isBot and state.player.Parent and (state.dirty or tick % 4 == 0) then
+				sendState(state)
+			end
+		end
+	end
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(30)
+		RivalSystem.FillFreeBases(#Players:GetPlayers())
+	end
+end)

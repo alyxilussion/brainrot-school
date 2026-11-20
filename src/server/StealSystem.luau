@@ -1,118 +1,170 @@
--- StealSystem: the "Press [E] STEAL" prompt on every placed brainrot.
--- Walk up to a brainrot on a rival's unlocked base and the prompt appears;
--- press E and it is yours to carry home, while its owner gets an alert.
--- A locked base shows LOCKED instead, and the prompt refuses to fire.
+-- StealSystem: Press [E] Steal on every brainrot in someone else's base,
+-- Press [E] Sell on your own, and the base lock [L] with its shield, laser
+-- gate and countdown. A locked base keeps its prompts visible, reading
+-- "Locked 42s", so a thief always knows why the steal is refused.
 
-local Players = game:GetService("Players")
-
-local PlayerState = require(script.Parent.PlayerState)
-local RemoteHub = require(script.Parent.RemoteHub)
-local CarrySystem = require(script.Parent.CarrySystem)
-local QuestSystem = require(script.Parent.QuestSystem)
+local Workspace = game:GetService("Workspace")
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Config = require(Shared.Config)
 
 local StealSystem = {}
 
-local prompts = {} -- [uid] = { prompt, owner, record }
+local G
 
-local function notify(player, text, kind)
-	local event = RemoteHub.Get("Notify")
-	if event then
-		event:FireClient(player, text, kind or "info")
-	end
+local function now()
+	return Workspace:GetServerTimeNow()
 end
 
-local function baseIndexOfPedestal(pedestalId)
-	local basePart = string.match(pedestalId, "^b(%d+)p%d+$")
-	return basePart and tonumber(basePart) or nil
+local function secondsLeft(state)
+	return math.max(0, math.ceil(state.lockEndsAt - now()))
 end
 
--- Attaches the steal prompt to a newly placed brainrot.
-function StealSystem.CreatePrompt(model, owner, record)
-	local body = model.PrimaryPart
-	if not body then
+-- Owner alert: banner, toast and an alarm sound on the owner's screen only.
+local function alertOwner(owner, thiefName, record)
+	if owner.isBot then
 		return
 	end
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "StealPrompt"
-	prompt.ActionText = "STEAL"
-	prompt.ObjectText = record.name
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 10
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = body
-	-- The client reads this to hide your own prompts from you: you cannot
-	-- steal from yourself, so your own brainrots stay uncluttered.
-	prompt:SetAttribute("OwnerUserId", owner.UserId)
-	prompts[record.uid] = { prompt = prompt, owner = owner, record = record }
-	prompt.Triggered:Connect(function(player)
-		StealSystem.TrySteal(player, record.uid)
-	end)
+	G.notify(owner, thiefName .. " is stealing your " .. record.name .. "!", Color3.fromRGB(255, 90, 90))
+	G.banner("THIEF IN YOUR CLASSROOM! PULL [Q] or PUSH [F] them to get it back", Color3.fromRGB(230, 60, 70), 5, owner)
+	G.fx("sound", "alarm", nil, owner)
 end
 
-function StealSystem.RemovePrompt(uid)
-	local entry = prompts[uid]
-	if entry then
-		entry.prompt:Destroy()
-		prompts[uid] = nil
+-- A thief (player or rival) takes a placed brainrot. Returns true on success.
+function StealSystem.TrySteal(thief, record)
+	local owner = record.owner
+	if record.status ~= "placed" or not owner or owner == thief then
+		return false
+	end
+	local root = G.State.RootOf(thief)
+	local body = record.model and record.model.PrimaryPart
+	if not root or not body or (root.Position - body.Position).Magnitude > Config.STEAL_RANGE + 6 then
+		return false
+	end
+	if G.State.IsLocked(owner, now()) then
+		G.notify(thief, "Locked for " .. secondsLeft(owner) .. "s — come back later!", Color3.fromRGB(120, 200, 255))
+		return false
+	end
+	local name = record.name
+	-- TakeIntoHands checks capacity before it touches the base, so a full
+	-- pair of hands never deletes the brainrot.
+	if not G.Carry.TakeIntoHands(thief, record) then
+		return false
+	end
+	record.stolenFrom = owner
+	alertOwner(owner, thief.name, record)
+	G.notify(thief, "Stole " .. name .. "! Run it home!", Color3.fromRGB(255, 220, 90))
+	G.Quests.OnEvent(thief, "steal", 1)
+	G.fx("sound", "steal", record.model.PrimaryPart.Position)
+	G.fx("text", record.model.PrimaryPart.Position, "STOLEN!", Color3.fromRGB(255, 90, 90))
+	return true
+end
+
+local function refreshStealPrompt(record)
+	local prompt = record.stealPrompt
+	if not prompt or not prompt.Parent or not record.owner then
+		return
+	end
+	if G.State.IsLocked(record.owner, now()) then
+		prompt.ActionText = "Locked " .. secondsLeft(record.owner) .. "s"
+	else
+		prompt.ActionText = "Steal"
 	end
 end
 
--- Locks or unlocks every prompt on one base: locked prompts read LOCKED and
--- cannot fire, unlocked ones read STEAL again.
-function StealSystem.SetPromptsForBase(baseIndex, locked)
-	for _, entry in pairs(prompts) do
-		local record = entry.record
-		if record.pedestalId and baseIndexOfPedestal(record.pedestalId) == baseIndex then
-			entry.prompt.Enabled = not locked
-			entry.prompt.ActionText = locked and "LOCKED" or "STEAL"
+-- Called by CarrySystem.Place: Steal for everyone else, Sell for the owner.
+function StealSystem.AttachPrompts(record)
+	local owner = record.owner
+	local steal, sell = G.Factory.AttachBasePrompts(record.model, record, owner.userId, owner.isBot)
+	record.stealPrompt = steal
+	refreshStealPrompt(record)
+	table.insert(record.connections, steal.Triggered:Connect(function(player)
+		local thief = G.State.Get(player)
+		if thief then
+			StealSystem.TrySteal(thief, record)
 		end
+	end))
+	if sell then
+		table.insert(record.connections, sell.Triggered:Connect(function(player)
+			local state = G.State.Get(player)
+			if state and state == record.owner and record.status == "placed" then
+				local value = G.Factory.SellValue(record)
+				local position = record.model.PrimaryPart.Position
+				G.Carry.Destroy(record)
+				G.Economy.AddCash(state, value, "sell")
+				G.notify(state, "Sold for " .. Config.FormatMoney(value), Color3.fromRGB(120, 255, 150))
+				G.fx("text", position, "+" .. Config.FormatMoney(value), Color3.fromRGB(120, 255, 150))
+				G.fx("sound", "coin", position)
+			end
+		end))
 	end
 end
 
-function StealSystem.TrySteal(player, uid)
-	local entry = prompts[uid]
-	if not entry then
+-- [L]: shield the base. Recharges after it runs out.
+function StealSystem.ToggleLock(state)
+	local t = now()
+	if G.State.IsLocked(state, t) then
+		G.notify(state, "Already locked: " .. secondsLeft(state) .. "s left", Color3.fromRGB(120, 200, 255))
 		return
 	end
-	local owner = entry.owner
-	local record = entry.record
-	if player == owner then
+	if t < state.lockReadyAt then
+		G.notify(state, "Lock recharging: " .. math.ceil(state.lockReadyAt - t) .. "s", Color3.fromRGB(255, 180, 90))
 		return
 	end
-	local ownerState = PlayerState.Get(owner)
-	local thiefState = PlayerState.Get(player)
-	if not ownerState or not thiefState then
+	if not state.baseIndex then
 		return
 	end
-	if PlayerState.IsLocked(ownerState) then
-		notify(player, "That base is locked!", "warn")
+	local duration = G.State.LockDuration(state)
+	state.lockEndsAt = t + duration
+	state.lockReadyAt = t + duration + Config.LOCK_RECHARGE
+	G.notify(state, "Classroom locked for " .. duration .. "s", Color3.fromRGB(120, 200, 255))
+	G.fx("sound", "lock", G.World.GetBase(state.baseIndex).center)
+	G.Quests.OnEvent(state, "lock", 1)
+	StealSystem.RefreshBase(state)
+	G.State.Changed(state)
+end
+
+-- Shield visuals, sign text and every Steal prompt in the base.
+function StealSystem.RefreshBase(state)
+	local base = state.baseIndex and G.World.GetBase(state.baseIndex)
+	if not base then
 		return
 	end
-	if #thiefState.carried >= PlayerState.GetCarryCapacity(thiefState) then
-		notify(player, "Your hands are full! Place a brainrot first.", "warn")
-		return
+	local locked = G.State.IsLocked(state, now())
+	G.World.SetBaseLockVisual(base, locked, secondsLeft(state))
+	for _, record in pairs(state.placed) do
+		refreshStealPrompt(record)
 	end
-	if not ownerState.placed[record.pedestalId] or ownerState.placed[record.pedestalId].uid ~= uid then
-		return
-	end
-	-- The thief needs a character to carry it: without one the brainrot
-	-- would leave its pedestal and belong to nobody.
-	local thiefCharacter = player.Character
-	if not thiefCharacter or not thiefCharacter:FindFirstChild("HumanoidRootPart") then
-		return
-	end
-	-- Take it off the pedestal, keep the model, and put it in the thief's hands.
-	CarrySystem.RemovePlaced(owner, record.pedestalId, false)
-	StealSystem.RemovePrompt(uid)
-	if not CarrySystem.TakeIntoHands(player, thiefState, record) then
-		return
-	end
-	PlayerState.PushUpdate(thiefState)
-	PlayerState.PushUpdate(ownerState)
-	notify(player, "You stole " .. record.name .. "! Run home!", "good")
-	notify(owner, "Brainrot-mu dicuri! " .. player.Name .. " stole your " .. record.name .. "!", "alert")
-	QuestSystem.OnEvent(player, "stole", { rarity = record.rarity })
+end
+
+function StealSystem.Unlock(state)
+	state.lockEndsAt = 0
+	StealSystem.RefreshBase(state)
+end
+
+function StealSystem.Init(context)
+	G = context
+	G.Remotes.ToggleLock.OnServerEvent:Connect(function(player)
+		local state = G.State.Get(player)
+		if state then
+			StealSystem.ToggleLock(state)
+		end
+	end)
+	-- Countdown tick: the shield drops by itself when time runs out.
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			for _, state in pairs(G.State.All()) do
+				if state.baseIndex and (state.lockEndsAt > 0) then
+					StealSystem.RefreshBase(state)
+					if state.lockEndsAt <= now() then
+						state.lockEndsAt = 0
+						G.notify(state, "Your lock wore off!", Color3.fromRGB(255, 180, 90))
+						G.State.Changed(state)
+					end
+				end
+			end
+		end
+	end)
 end
 
 return StealSystem

@@ -1,355 +1,323 @@
--- CarrySystem: everything about holding a brainrot in your hands.
--- Buying from the parade, grabbing a dropped or high-pad brainrot, carrying it
--- welded to your character, dropping it, and placing it on a pedestal in your
--- own classroom. The steal prompt is attached by StealSystem through the
--- OnPlaced callback the bootstrap wires up, so this module never requires it.
+-- CarrySystem: every brainrot record and where it is: walking the parade,
+-- on a pad, carried overhead, dropped on the grass or on a pedestal.
+-- Carriers auto-deposit by walking into their own classroom; a death, a
+-- reset or a knock drops what you carry so nothing is ever lost or ghosted.
 
-local Players = game:GetService("Players")
-
+local Workspace = game:GetService("Workspace")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Catalog = require(Shared.BrainrotCatalog)
-local PlayerState = require(script.Parent.PlayerState)
-local RemoteHub = require(script.Parent.RemoteHub)
-local Spawner = require(script.Parent.Spawner)
-local WorldBuilder = require(script.Parent.WorldBuilder)
-local QuestSystem = require(script.Parent.QuestSystem)
 
 local CarrySystem = {}
+CarrySystem.records = {}
 
--- Set by the bootstrap: StealSystem.CreatePrompt(model, owner, record).
-CarrySystem.OnPlaced = nil
+local G -- game context, set in Init
+local folder
+local uidCounter = 0
+local rng = Random.new()
 
-local dropped = {} -- [uid] = record lying on the field
-local pedestalBase = {} -- [pedestalId] = base index
-
-local CARRY_OFFSETS = {
-	CFrame.new(0, 3.4, 0),
-	CFrame.new(0, 1.4, 3.4),
-}
-
-local function notify(player, text, kind)
-	local event = RemoteHub.Get("Notify")
-	if event then
-		event:FireClient(player, text, kind or "info")
-	end
+local function now()
+	return Workspace:GetServerTimeNow()
 end
 
--- A buy or grab without a character would take the cash and strand the
--- brainrot, so every entry point checks this before anything changes.
-local function hasCharacter(player)
-	local character = player.Character
-	return character and character:FindFirstChild("HumanoidRootPart") ~= nil
-end
-
--- Welds every part of the model together, then welds the body to the
--- character's root so the brainrot rides along. Massless so it never drags.
-local function weldToCharacter(model, character, slotIndex)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return false
-	end
-	local body = model.PrimaryPart
-	for _, descendant in ipairs(model:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			descendant.Anchored = false
-			descendant.Massless = true
-			descendant.CanCollide = false
-			if descendant ~= body then
-				local constraint = Instance.new("WeldConstraint")
-				constraint.Part0 = body
-				constraint.Part1 = descendant
-				constraint.Parent = body
-			end
-		end
-	end
-	local weld = Instance.new("Weld")
-	weld.Name = "CarryWeld"
-	weld.Part0 = root
-	weld.Part1 = body
-	weld.C0 = CARRY_OFFSETS[slotIndex] or CARRY_OFFSETS[1]
-	weld.Parent = body
-	return true
-end
-
-local function unweldModel(model)
-	for _, descendant in ipairs(model:GetDescendants()) do
-		if descendant:IsA("Weld") or descendant:IsA("WeldConstraint") then
-			descendant:Destroy()
-		end
-	end
-	for _, descendant in ipairs(model:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			descendant.Anchored = true
-			descendant.Massless = false
-		end
-	end
-end
-
-local function takeIntoHands(player, state, record)
-	local character = player.Character
-	if not character then
-		return false
-	end
-	local slotIndex = #state.carried + 1
-	if not weldToCharacter(record.model, character, slotIndex) then
-		return false
-	end
-	table.insert(state.carried, record)
-	state.owned[record.catalogId] = true
-	return true
-end
-
--- Public so StealSystem can hand a stolen brainrot to its new carrier with
--- the exact same weld, instead of duplicating the weld code.
-function CarrySystem.TakeIntoHands(player, state, record)
-	return takeIntoHands(player, state, record)
-end
-
--- Buys a parade brainrot: cash check, then it goes into the player's hands.
-function CarrySystem.TryBuyParade(player, uid)
-	local record = Spawner.GetParade(uid)
-	if not record then
-		return
-	end
-	local state = PlayerState.Get(player)
-	if not state then
-		return
-	end
-	if not hasCharacter(player) then
-		return
-	end
-	if #state.carried >= PlayerState.GetCarryCapacity(state) then
-		notify(player, "Your hands are full! Place a brainrot first.", "warn")
-		return
-	end
-	local entry = Catalog.ById[record.catalogId]
-	if not PlayerState.TrySpend(state, entry.cost) then
-		notify(player, "Not enough cash for " .. record.name .. " ($" .. entry.cost .. ").", "warn")
-		return
-	end
-	Spawner.RemoveParade(uid)
-	if takeIntoHands(player, state, record) then
-		PlayerState.PushUpdate(state)
-		notify(player, "You bought " .. record.name .. "! Carry it home to your classroom.", "good")
-		QuestSystem.OnEvent(player, "bought", { rarity = record.rarity })
-	end
-end
-
--- Grabs a free brainrot from a high pad (gym wall, big tree, tower top).
-function CarrySystem.TryGrabHighPad(player, uid)
-	local record = Spawner.GetHighPad(uid)
-	if not record then
-		return
-	end
-	local state = PlayerState.Get(player)
-	if not state then
-		return
-	end
-	if not hasCharacter(player) then
-		return
-	end
-	if #state.carried >= PlayerState.GetCarryCapacity(state) then
-		notify(player, "Your hands are full! Place a brainrot first.", "warn")
-		return
-	end
-	Spawner.RemoveHighPad(uid)
-	if takeIntoHands(player, state, record) then
-		PlayerState.PushUpdate(state)
-		notify(player, "You grabbed " .. record.name .. " from the heights!", "good")
-		QuestSystem.OnEvent(player, "bought", { rarity = record.rarity })
-	end
-end
-
--- Grabs a brainrot lying dropped on the field. Anyone can take it.
-function CarrySystem.TryGrabDropped(player, uid)
-	local record = dropped[uid]
-	if not record then
-		return
-	end
-	local state = PlayerState.Get(player)
-	if not state then
-		return
-	end
-	if not hasCharacter(player) then
-		return
-	end
-	if #state.carried >= PlayerState.GetCarryCapacity(state) then
-		notify(player, "Your hands are full! Place a brainrot first.", "warn")
-		return
-	end
-	dropped[uid] = nil
-	if takeIntoHands(player, state, record) then
-		PlayerState.PushUpdate(state)
-		notify(player, "You grabbed the dropped " .. record.name .. "!", "good")
-	end
-end
-
--- Drops one carried brainrot on the ground where the player stands.
-function CarrySystem.DropCarried(player, record, atPosition)
-	local state = PlayerState.Get(player)
-	if not state then
-		return
-	end
-	for i, carried in ipairs(state.carried) do
-		if carried.uid == record.uid then
-			table.remove(state.carried, i)
-			break
-		end
-	end
-	unweldModel(record.model)
-	local spot = atPosition or Vector3.new(0, Config.GROUND_Y + 2, 0)
-	record.model:PivotTo(CFrame.new(spot.X, Config.GROUND_Y + 1.6, spot.Z))
-	record.model.Parent = workspace
-	dropped[record.uid] = record
-	local clicker = record.model.PrimaryPart:FindFirstChild("Clicker")
-	if clicker then
-		clicker.MouseClick:Connect(function(grabber)
-			CarrySystem.TryGrabDropped(grabber, record.uid)
-		end)
-	end
-	-- A dropped brainrot wanders off after a while. The generation stamp
-	-- ties the timer to this drop: if the brainrot is grabbed and dropped
-	-- again, the old timer must not destroy the fresh drop.
-	record.dropGeneration = (record.dropGeneration or 0) + 1
-	local generation = record.dropGeneration
-	task.delay(Config.DROPPED_LIFETIME, function()
-		if dropped[record.uid] and record.dropGeneration == generation then
-			dropped[record.uid] = nil
-			record.model:Destroy()
-		end
-	end)
-	PlayerState.PushUpdate(state)
-end
-
-function CarrySystem.DropAllCarried(player)
-	local state = PlayerState.Get(player)
-	if not state or #state.carried == 0 then
-		return
-	end
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local basePosition = root and root.Position or Vector3.new(0, Config.GROUND_Y, 0)
-	local copy = table.clone(state.carried)
-	for i, record in ipairs(copy) do
-		local offset = Vector3.new((i - 1) * 4 - 2, 0, 4)
-		CarrySystem.DropCarried(player, record, basePosition + offset)
-	end
-end
-
--- Puts a brainrot record on one pedestal: positions the model, registers it
--- as placed, tints the pedestal ring, and attaches the steal prompt. Shared
--- by hand placement, the Gacha Machine and the Fuse Lab. Silent skips the
--- "Placed" message so the caller can announce its own result instead.
-function CarrySystem.PlaceRecordOnPedestal(player, state, record, base, pedestal, silent)
-	unweldModel(record.model)
-	record.model:PivotTo(CFrame.new(pedestal.position + Vector3.new(0, 1.6, 0)))
-	record.model.Parent = workspace
-	record.pedestalId = pedestal.id
-	state.placed[pedestal.id] = record
-	pedestal.top.Color = Config.RARITY_COLORS[record.rarity] or Color3.fromRGB(200, 200, 200)
-	if CarrySystem.OnPlaced then
-		CarrySystem.OnPlaced(record.model, player, record)
-	end
-	PlayerState.PushUpdate(state)
-	if not silent then
-		local entry = Catalog.ById[record.catalogId]
-		notify(player, "Placed " .. record.name .. " — earning $" .. Catalog.MutatedIncome(entry, record.mutation) .. "/s!", "good")
-	end
-	QuestSystem.OnEvent(player, "placed", { rarity = record.rarity })
-end
-
--- Places the first carried brainrot on one of the player's own pedestals.
-function CarrySystem.TryPlace(player, pedestalId, base)
-	local state = PlayerState.Get(player)
-	if not state then
-		return
-	end
-	if state.baseIndex ~= base.index then
-		notify(player, "That's not your classroom!", "warn")
-		return
-	end
-	if #state.carried == 0 then
-		notify(player, "You're not carrying a brainrot.", "warn")
-		return
-	end
-	if state.placed[pedestalId] then
-		notify(player, "That pedestal is taken.", "warn")
-		return
-	end
-	local pedestal = nil
-	for _, candidate in ipairs(base.pedestals) do
-		if candidate.id == pedestalId then
-			pedestal = candidate
-			break
-		end
-	end
-	if not pedestal then
-		return
-	end
-	local record = table.remove(state.carried, 1)
-	CarrySystem.PlaceRecordOnPedestal(player, state, record, base, pedestal, false)
-end
-
--- Removes a placed brainrot: clears the pedestal tint and optionally destroys
--- the model (a steal keeps the model; a rebirth or crow theft destroys it).
-function CarrySystem.RemovePlaced(player, pedestalId, destroyModel)
-	local state = PlayerState.Get(player)
-	if not state then
-		return nil
-	end
-	local record = state.placed[pedestalId]
-	if not record then
-		return nil
-	end
-	state.placed[pedestalId] = nil
-	local base = WorldBuilder.GetBase(state.baseIndex)
-	if base then
-		for _, pedestal in ipairs(base.pedestals) do
-			if pedestal.id == pedestalId then
-				pedestal.top.Color = Color3.fromRGB(200, 200, 200)
-			end
-		end
-	end
-	if destroyModel and record.model then
-		record.model:Destroy()
-	end
-	PlayerState.PushUpdate(state)
+-- A new record plus its model. status: parade | pad | carried | dropped | placed.
+function CarrySystem.NewRecord(entry, mutation, cframe, status, opts)
+	uidCounter += 1
+	local uid = "r" .. uidCounter
+	local record = {
+		uid = uid,
+		catalogId = entry.id,
+		name = entry.name,
+		rarity = entry.rarity,
+		mutation = mutation,
+		status = status,
+		carrier = nil,
+		owner = nil,
+		pedestal = nil,
+		connections = {},
+	}
+	opts = opts or {}
+	opts.origin = cframe
+	record.model = G.Factory.Build(entry, mutation, uid, opts)
+	record.model.Parent = folder
+	CarrySystem.records[uid] = record
 	return record
 end
 
--- Cleans up when a player leaves: their brainrots go with them.
-function CarrySystem.CleanupPlayer(player)
-	local state = PlayerState.Get(player)
-	if not state then
-		return
+-- Prompts and their connections belong to one status; clear them on change.
+function CarrySystem.ClearPrompts(record)
+	for _, connection in ipairs(record.connections) do
+		connection:Disconnect()
 	end
-	for _, record in ipairs(state.carried) do
-		if record.model then
-			record.model:Destroy()
+	record.connections = {}
+	if record.model then
+		for _, descendant in ipairs(record.model:GetDescendants()) do
+			if descendant:IsA("ProximityPrompt") then
+				descendant:Destroy()
+			end
 		end
-	end
-	for pedestalId in pairs(state.placed) do
-		CarrySystem.RemovePlaced(player, pedestalId, true)
 	end
 end
 
-function CarrySystem.Start()
-	for _, base in ipairs(WorldBuilder.GetBases()) do
-		for _, pedestal in ipairs(base.pedestals) do
-			pedestalBase[pedestal.id] = base.index
-			pedestal.clicker.MouseClick:Connect(function(player)
-				CarrySystem.TryPlace(player, pedestal.id, base)
-			end)
+function CarrySystem.Destroy(record)
+	CarrySystem.ClearPrompts(record)
+	if record.carrier then
+		CarrySystem.Release(record)
+	end
+	if record.owner and record.pedestal then
+		record.owner.placed[record.pedestal.id] = nil
+		G.State.Changed(record.owner)
+	end
+	CarrySystem.records[record.uid] = nil
+	if record.model then
+		record.model:Destroy()
+		record.model = nil
+	end
+end
+
+-- Welding: the model rides above the carrier's head and moves with them.
+local function setPhysical(model, carried)
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Anchored = not carried
+			part.Massless = carried
+			part.CanCollide = false
+			part.CanQuery = not carried
 		end
 	end
-	-- Pedestals bought later (Extra Slot upgrade) get wired when they are added.
-	WorldBuilder.OnPedestalAdded = function(base, pedestal)
-		pedestalBase[pedestal.id] = base.index
-		pedestal.clicker.MouseClick:Connect(function(player)
-			CarrySystem.TryPlace(player, pedestal.id, base)
-		end)
+end
+
+local function weldTo(record, root)
+	local model = record.model
+	local primary = model.PrimaryPart
+	local welds = Instance.new("Folder")
+	welds.Name = "CarryWelds"
+	welds.Parent = model
+	model:PivotTo(root.CFrame * CFrame.new(0, 3 + #record.carrier.carrying * 3.6, 0.4))
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") and part ~= primary then
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = primary
+			weld.Part1 = part
+			weld.Parent = welds
+		end
 	end
+	setPhysical(model, true)
+	local hold = Instance.new("WeldConstraint")
+	hold.Name = "HoldWeld"
+	hold.Part0 = root
+	hold.Part1 = primary
+	hold.Parent = welds
+end
+
+local function unweld(record)
+	local welds = record.model and record.model:FindFirstChild("CarryWelds")
+	if welds then
+		welds:Destroy()
+	end
+	if record.model then
+		setPhysical(record.model, false)
+	end
+end
+
+-- Pick up a brainrot. Fails without side effects when hands are full.
+function CarrySystem.TakeIntoHands(state, record)
+	if #state.carrying >= G.State.CarryCapacity(state) then
+		G.notify(state, "Your hands are full! Bring it home first.", Color3.fromRGB(255, 120, 120))
+		return false
+	end
+	local root = G.State.RootOf(state)
+	if not root or not record.model then
+		return false
+	end
+	CarrySystem.ClearPrompts(record)
+	if record.owner and record.pedestal then
+		record.owner.placed[record.pedestal.id] = nil
+		G.State.Changed(record.owner)
+	end
+	record.owner = nil
+	record.pedestal = nil
+	record.status = "carried"
+	record.carrier = state
+	record.droppedAt = nil
+	weldTo(record, root)
+	table.insert(state.carrying, record)
+	G.Factory.SetStatus(record.model, "CARRIED BY " .. string.upper(state.name), Color3.fromRGB(255, 220, 90))
+	G.State.MarkOwned(state, record.catalogId)
+	G.Quests.SyncCounters(state)
+	G.Economy.ApplyWalkSpeed(state)
+	G.State.Changed(state)
+	return true
+end
+
+-- Take a record out of its carrier's hands (no placement yet).
+function CarrySystem.Release(record)
+	local carrier = record.carrier
+	if not carrier then
+		return
+	end
+	local index = table.find(carrier.carrying, record)
+	if index then
+		table.remove(carrier.carrying, index)
+	end
+	record.carrier = nil
+	unweld(record)
+	G.Economy.ApplyWalkSpeed(carrier)
+	G.State.Changed(carrier)
+end
+
+-- Drop on the ground: anyone can press [E] Grab for a while, then it wanders off.
+function CarrySystem.Drop(record, position, lastCarrier)
+	CarrySystem.Release(record)
+	CarrySystem.ClearPrompts(record)
+	if not record.model then
+		return
+	end
+	-- Land on whatever is below: grass, a roof, the tree platform.
+	local x = math.clamp(position.X, -185, 185)
+	local z = math.clamp(position.Z, -185, 185)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { G.World.GetWorld().root }
+	local hit = Workspace:Raycast(Vector3.new(x, position.Y + 2, z), Vector3.new(0, -120, 0), params)
+	local y = hit and hit.Position.Y or G.World.GroundHeightAt(x, z)
+	record.model:PivotTo(CFrame.new(x, y, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+	record.status = "dropped"
+	record.droppedAt = now()
+	record.lastCarrier = lastCarrier
+	G.Factory.SetStatus(record.model, "DROPPED · [E] GRAB", Color3.fromRGB(255, 220, 90))
+	local prompt = G.Factory.AttachGrabPrompt(record.model, G.Factory.DescribeRecord(record))
+	table.insert(record.connections, prompt.Triggered:Connect(function(player)
+		local state = G.State.Get(player)
+		if state and record.status == "dropped" and CarrySystem.TakeIntoHands(state, record) then
+			if record.lastCarrier ~= state then
+				G.Quests.OnEvent(state, "recover", 1)
+			end
+			G.fx("text", record.model.PrimaryPart.Position, "GRABBED!", Color3.fromRGB(255, 220, 90))
+		end
+	end))
+	G.fx("text", Vector3.new(x, y + 5, z), "DROPPED!", Color3.fromRGB(255, 150, 90))
+end
+
+-- Everything someone carries hits the floor (death, reset, Lunch Rush).
+function CarrySystem.DropAll(state, position)
+	local root = G.State.RootOf(state)
+	position = position or (root and root.Position) or (state.lastPosition or Vector3.new(0, 1, 100))
+	for i = #state.carrying, 1, -1 do
+		local record = state.carrying[i]
+		local spread = Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-3, 3))
+		CarrySystem.Drop(record, position + spread, state)
+	end
+end
+
+-- Put a record on a pedestal of a base and hand it the Steal/Sell prompts.
+function CarrySystem.Place(state, record, pedestal)
+	CarrySystem.Release(record)
+	CarrySystem.ClearPrompts(record)
+	local base = G.World.GetBase(state.baseIndex)
+	local facing = base.cframe - base.cframe.Position
+	record.model:PivotTo(CFrame.new(pedestal.position) * facing)
+	record.status = "placed"
+	record.owner = state
+	record.pedestal = pedestal
+	state.placed[pedestal.id] = record
+	G.State.MarkOwned(state, record.catalogId)
+	G.Quests.SyncCounters(state)
+	G.Steal.AttachPrompts(record)
+	G.State.Changed(state)
+end
+
+-- Place on the first free pedestal; returns false when the base is full.
+function CarrySystem.PlaceAnywhere(state, record)
+	local base = state.baseIndex and G.World.GetBase(state.baseIndex)
+	local pedestal = base and G.World.GetFreePedestal(base, state.placed)
+	if not pedestal then
+		return false
+	end
+	CarrySystem.Place(state, record, pedestal)
+	return true
+end
+
+-- Walk into your own classroom with brainrots in hand: they hop onto pedestals.
+local fullWarnings = {}
+local function depositCarried(state)
+	local root = G.State.RootOf(state)
+	if not root or not state.baseIndex or #state.carrying == 0 then
+		return
+	end
+	if G.World.BaseAtPosition(root.Position) ~= state.baseIndex then
+		return
+	end
+	for i = #state.carrying, 1, -1 do
+		local record = state.carrying[i]
+		local stolenFrom = record.stolenFrom
+		if CarrySystem.PlaceAnywhere(state, record) then
+			G.Quests.OnEvent(state, "place", 1)
+			if stolenFrom and stolenFrom ~= state then
+				G.notify(state, "Stolen " .. record.name .. " is yours now!", Color3.fromRGB(120, 255, 150))
+			end
+			record.stolenFrom = nil
+			G.fx("text", record.model.PrimaryPart.Position, "+ " .. Config.FormatMoney(Catalog.MutatedIncome(Catalog.ById[record.catalogId], record.mutation)) .. "/s", Color3.fromRGB(120, 255, 150))
+			G.fx("sound", "place", record.model.PrimaryPart.Position)
+		elseif (fullWarnings[state] or 0) < os.clock() then
+			fullWarnings[state] = os.clock() + 4
+			G.notify(state, "Classroom full! Sell one [E] or buy Extra Slot.", Color3.fromRGB(255, 180, 90))
+			break
+		end
+	end
+end
+
+-- Click a pedestal of your own base while carrying: place exactly there.
+local function onPedestalAdded(base, pedestal)
+	pedestal.clicker.MouseClick:Connect(function(player)
+		local state = G.State.Get(player)
+		if not state or state.baseIndex ~= base.index or #state.carrying == 0 or state.placed[pedestal.id] then
+			return
+		end
+		local root = G.State.RootOf(state)
+		if root and (root.Position - pedestal.position).Magnitude < 30 then
+			local record = state.carrying[#state.carrying]
+			CarrySystem.Place(state, record, pedestal)
+			G.Quests.OnEvent(state, "place", 1)
+		end
+	end)
+end
+
+function CarrySystem.Init(context)
+	G = context
+	folder = Instance.new("Folder")
+	folder.Name = "Brainrots"
+	folder.Parent = Workspace
+	G.World.OnPedestalAdded = onPedestalAdded
+	for _, base in ipairs(G.World.GetBases()) do
+		for _, pedestal in ipairs(base.pedestals) do
+			onPedestalAdded(base, pedestal)
+		end
+	end
+	-- Deposit check and dropped-brainrot expiry, four times a second.
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			for _, state in pairs(G.State.All()) do
+				if not state.isBot then
+					depositCarried(state)
+					local root = G.State.RootOf(state)
+					if root then
+						state.lastPosition = root.Position
+					end
+				end
+			end
+			local t = now()
+			for _, record in pairs(CarrySystem.records) do
+				if record.status == "dropped" and record.droppedAt and t - record.droppedAt > Config.DROPPED_LIFETIME then
+					if record.model and record.model.PrimaryPart then
+						G.fx("text", record.model.PrimaryPart.Position, record.name .. " wandered off", Color3.fromRGB(200, 200, 220))
+					end
+					CarrySystem.Destroy(record)
+				end
+			end
+		end
+	end)
 end
 
 return CarrySystem

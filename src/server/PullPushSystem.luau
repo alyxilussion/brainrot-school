@@ -1,60 +1,85 @@
--- PullPushSystem: player-versus-player grabbing, the game's differentiator.
--- PULL [Q] yanks a nearby carrier toward you and slows them for a few seconds.
--- PUSH [F] shoves a carrier at close range: their brainrot may DROP, and
--- anyone nearby can grab it. A Shield blocks both; your own base is a safe
--- zone where neither can touch you.
+-- PullPushSystem: Tarik [Q] and Dorong [F]. The server picks or checks the
+-- target (any student or rival thief in range, carriers first), spends the
+-- cooldown only on a hit, and sends a short clamped knockback to the target's
+-- own client (characters are client-owned, so server velocity would not
+-- replicate). Carriers stagger and may drop what they carry.
 
-local Players = game:GetService("Players")
-
+local Workspace = game:GetService("Workspace")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config)
-local PlayerState = require(script.Parent.PlayerState)
-local RemoteHub = require(script.Parent.RemoteHub)
-local CarrySystem = require(script.Parent.CarrySystem)
-local QuestSystem = require(script.Parent.QuestSystem)
-local UpgradeSystem = require(script.Parent.UpgradeSystem)
-local WorldBuilder = require(script.Parent.WorldBuilder)
 
 local PullPushSystem = {}
 
-local rng = Random.new(os.time() + 7)
+local G
+local rng = Random.new()
 
-local function notify(player, text, kind)
-	local event = RemoteHub.Get("Notify")
-	if event then
-		event:FireClient(player, text, kind or "info")
+local MOVES = {
+	pull = {
+		range = Config.PULL_RANGE,
+		cooldown = Config.PULL_COOLDOWN,
+		speed = Config.PULL_SPEED,
+		time = Config.PULL_TIME,
+		loose = Config.PULL_LOOSE_CHANCE,
+		readyKey = "pullReadyAt",
+		quest = "pull",
+		word = "PULLED!",
+		color = Color3.fromRGB(255, 170, 60),
+	},
+	push = {
+		range = Config.PUSH_RANGE,
+		cooldown = Config.PUSH_COOLDOWN,
+		speed = Config.PUSH_SPEED,
+		time = Config.PUSH_TIME,
+		loose = Config.PUSH_LOOSE_CHANCE,
+		readyKey = "pushReadyAt",
+		quest = "push",
+		word = "PUSHED!",
+		color = Color3.fromRGB(90, 190, 255),
+	},
+}
+
+local function now()
+	return Workspace:GetServerTimeNow()
+end
+
+local function horizontal(v)
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+-- Can this state be hit right now? Not while immune, and not inside their
+-- own locked classroom (the shield protects its owner too).
+local function canHit(target, t)
+	if target.immuneUntil > t then
+		return false
 	end
+	local root = G.State.RootOf(target)
+	if not root then
+		return false
+	end
+	if target.baseIndex and G.State.IsLocked(target, t) and G.World.BaseAtPosition(root.Position) == target.baseIndex then
+		return false
+	end
+	return true
 end
 
-local function rootOf(player)
-	local character = player.Character
-	return character and character:FindFirstChild("HumanoidRootPart") or nil
-end
-
-local function humanoidOf(player)
-	local character = player.Character
-	return character and character:FindFirstChildOfClass("Humanoid") or nil
-end
-
--- The nearest other player in range who is carrying at least one brainrot.
-local function findCarrierTarget(player, range)
-	local myRoot = rootOf(player)
-	if not myRoot then
+-- Nearest valid target in range; carriers win ties within 6 studs.
+local function findTarget(attacker, move, hint, t)
+	local origin = G.State.RootOf(attacker)
+	if not origin then
 		return nil
 	end
-	local best = nil
-	local bestDistance = range
-	for _, other in ipairs(Players:GetPlayers()) do
-		if other ~= player then
-			local otherState = PlayerState.Get(other)
-			if otherState and #otherState.carried > 0 then
-				local otherRoot = rootOf(other)
-				if otherRoot then
-					local distance = (otherRoot.Position - myRoot.Position).Magnitude
-					if distance <= bestDistance then
-						best = other
-						bestDistance = distance
-					end
+	local best, bestScore = nil, math.huge
+	for _, state in pairs(G.State.All()) do
+		if state ~= attacker and canHit(state, t) then
+			local root = G.State.RootOf(state)
+			local distance = (root.Position - origin.Position).Magnitude
+			if distance <= move.range + 2 then
+				local score = distance - (#state.carrying > 0 and 6 or 0)
+				if hint and G.State.CharacterOf(state) == hint then
+					score -= 1000
+				end
+				if score < bestScore then
+					best, bestScore = state, score
 				end
 			end
 		end
@@ -62,128 +87,88 @@ local function findCarrierTarget(player, range)
 	return best
 end
 
--- A player standing inside their own classroom cannot be pulled or pushed.
-local function isInOwnBase(player)
-	local state = PlayerState.Get(player)
-	local root = rootOf(player)
-	if not state or not root then
-		return false
+-- Knockback velocity: horizontal, clamped, plus a small hop.
+local function knockVelocity(moveName, attackerRoot, targetRoot, move)
+	local direction = horizontal(targetRoot.Position - attackerRoot.Position)
+	if direction.Magnitude < 0.1 then
+		direction = horizontal(attackerRoot.CFrame.LookVector)
 	end
-	return WorldBuilder.BaseAtPosition(root.Position) == state.baseIndex
+	direction = direction.Unit
+	if moveName == "pull" then
+		direction = -direction
+		-- Never pull further than the gap between the two of them.
+		local gap = horizontal(targetRoot.Position - attackerRoot.Position).Magnitude
+		local speed = math.min(move.speed, math.max(0, gap - 4) / move.time)
+		return direction * speed + Vector3.new(0, Config.KNOCK_LIFT, 0)
+	end
+	return direction * move.speed + Vector3.new(0, Config.KNOCK_LIFT, 0)
 end
 
-function PullPushSystem.TryPull(player)
-	local state = PlayerState.Get(player)
-	if not state then
-		return
-	end
-	local now = os.clock()
-	if now - state.lastPullAt < Config.PULL_COOLDOWN then
-		notify(player, "Pull is recharging (" .. math.ceil(Config.PULL_COOLDOWN - (now - state.lastPullAt)) .. "s).", "warn")
-		return
-	end
-	state.lastPullAt = now
-	local target = findCarrierTarget(player, Config.PULL_RANGE)
-	if not target then
-		notify(player, "No carrier in pull range.", "warn")
-		return
-	end
-	if isInOwnBase(target) then
-		notify(player, target.Name .. " is safe inside their classroom.", "warn")
-		return
-	end
-	local targetState = PlayerState.Get(target)
-	if not targetState then
-		return
-	end
-	if PlayerState.IsShielded(targetState) then
-		notify(player, target.Name .. " is shielded!", "warn")
-		return
-	end
-	-- Yank the carrier toward the puller and slow their run.
-	local myRoot = rootOf(player)
-	local targetRoot = rootOf(target)
-	if not myRoot or not targetRoot then
-		return
-	end
-	local direction = (myRoot.Position - targetRoot.Position)
-	direction = Vector3.new(direction.X, 0, direction.Z)
-	if direction.Magnitude > 0.1 then
-		local tug = targetRoot.Position + direction.Unit * 6
-		targetRoot.CFrame = CFrame.new(tug.X, targetRoot.Position.Y, tug.Z)
-	end
-	targetState.slowUntil = now + Config.PULL_SLOW_TIME
-	local humanoid = humanoidOf(target)
-	if humanoid then
-		humanoid.WalkSpeed = Config.PULL_SLOW_SPEED
-		task.delay(Config.PULL_SLOW_TIME, function()
-			if target.Parent and os.clock() >= targetState.slowUntil then
-				local fresh = humanoidOf(target)
-				if fresh then
-					fresh.WalkSpeed = UpgradeSystem.GetWalkSpeed(targetState)
-				end
+function PullPushSystem.Hit(attacker, target, moveName, velocity, duration)
+	local t = now()
+	target.immuneUntil = t + Config.HIT_IMMUNITY
+	target.staggerUntil = t + Config.STAGGER_TIME
+	if target.isBot then
+		G.Rivals.Knock(target, velocity, duration)
+	else
+		G.Remotes.Knockback:FireClient(target.player, velocity, duration, Config.STAGGER_TIME)
+		G.Economy.ApplyWalkSpeed(target)
+		task.delay(Config.STAGGER_TIME + 0.05, function()
+			if G.State.Get(target.key) then
+				G.Economy.ApplyWalkSpeed(target)
 			end
 		end)
 	end
-	notify(player, "You pulled " .. target.Name .. "!", "good")
-	notify(target, player.Name .. " pulled you!", "alert")
-	QuestSystem.OnEvent(player, "pulled", {})
-	PlayerState.PushUpdate(state)
 end
 
-function PullPushSystem.TryPush(player)
-	local state = PlayerState.Get(player)
-	if not state then
+local function perform(attacker, moveName, hint)
+	local move = MOVES[moveName]
+	local t = now()
+	if t < attacker[move.readyKey] then
 		return
 	end
-	local now = os.clock()
-	if now - state.lastPushAt < Config.PUSH_COOLDOWN then
-		notify(player, "Push is recharging (" .. math.ceil(Config.PUSH_COOLDOWN - (now - state.lastPushAt)) .. "s).", "warn")
-		return
+	local target = findTarget(attacker, move, typeof(hint) == "Instance" and hint or nil, t)
+	local attackerRoot = G.State.RootOf(attacker)
+	if not target or not attackerRoot then
+		G.notify(attacker, "No one in range (" .. move.range .. " studs)", Color3.fromRGB(200, 200, 220))
+		return -- no cooldown spent on a miss
 	end
-	state.lastPushAt = now
-	local target = findCarrierTarget(player, Config.PUSH_RANGE)
-	if not target then
-		notify(player, "No carrier in push range.", "warn")
-		return
+	local targetRoot = G.State.RootOf(target)
+	attacker[move.readyKey] = t + move.cooldown
+	local velocity = knockVelocity(moveName, attackerRoot, targetRoot, move)
+	PullPushSystem.Hit(attacker, target, moveName, velocity, move.time)
+	G.Quests.OnEvent(attacker, move.quest, 1)
+	G.fx(moveName, attackerRoot, targetRoot)
+	G.fx("text", targetRoot.Position + Vector3.new(0, 4, 0), move.word, move.color)
+	-- A carrier may lose a brainrot: a pull drops it at the puller's feet.
+	if #target.carrying > 0 and rng:NextNumber() < move.loose then
+		local record = target.carrying[#target.carrying]
+		local dropAt = moveName == "pull" and attackerRoot.Position:Lerp(targetRoot.Position, 0.35) or targetRoot.Position + horizontal(velocity).Unit * 4
+		G.Carry.Drop(record, dropAt, target)
+		G.Quests.OnEvent(attacker, "knockLoose", 1)
+		G.notify(attacker, "Knocked loose: " .. record.name .. "! Grab it [E]", Color3.fromRGB(255, 220, 90))
+		G.notify(target, attacker.name .. " knocked your " .. record.name .. " loose!", Color3.fromRGB(255, 120, 120))
+		G.fx("sound", "loose", targetRoot.Position)
+	elseif not target.isBot then
+		G.notify(target, attacker.name .. " " .. string.lower(move.word), move.color)
 	end
-	if isInOwnBase(target) then
-		notify(player, target.Name .. " is safe inside their classroom.", "warn")
-		return
-	end
-	local targetState = PlayerState.Get(target)
-	if not targetState then
-		return
-	end
-	if PlayerState.IsShielded(targetState) then
-		notify(player, target.Name .. " is shielded!", "warn")
-		return
-	end
-	-- Shove the carrier away from the pusher.
-	local myRoot = rootOf(player)
-	local targetRoot = rootOf(target)
-	if not myRoot or not targetRoot then
-		return
-	end
-	local direction = (targetRoot.Position - myRoot.Position)
-	direction = Vector3.new(direction.X, 0, direction.Z)
-	if direction.Magnitude < 0.1 then
-		direction = Vector3.new(0, 0, 1)
-	end
-	direction = direction.Unit
-	targetRoot.AssemblyLinearVelocity = direction * Config.PUSH_FLING_SPEED + Vector3.new(0, 25, 0)
-	-- The shove may knock their brainrot loose for anyone to grab.
-	if #targetState.carried > 0 and rng:NextNumber() < Config.PUSH_DROP_CHANCE then
-		local droppedRecord = targetState.carried[1]
-		CarrySystem.DropCarried(target, droppedRecord, targetRoot.Position + direction * 4)
-		notify(player, "DROPPED! " .. target.Name .. " lost " .. droppedRecord.name .. "!", "good")
-		notify(target, "DROPPED! Your " .. droppedRecord.name .. " fell!", "alert")
-	else
-		notify(player, "You pushed " .. target.Name .. "!", "good")
-		notify(target, player.Name .. " pushed you!", "alert")
-	end
-	QuestSystem.OnEvent(player, "pushed", {})
-	PlayerState.PushUpdate(state)
+	G.State.Changed(attacker)
+end
+
+function PullPushSystem.Init(context)
+	G = context
+	G.Remotes.PullPlayer.OnServerEvent:Connect(function(player, hint)
+		local state = G.State.Get(player)
+		if state then
+			perform(state, "pull", hint)
+		end
+	end)
+	G.Remotes.PushPlayer.OnServerEvent:Connect(function(player, hint)
+		local state = G.State.Get(player)
+		if state then
+			perform(state, "push", hint)
+		end
+	end)
 end
 
 return PullPushSystem

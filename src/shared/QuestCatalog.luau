@@ -1,75 +1,78 @@
--- QuestCatalog: the quest text and rewards, shared so the server can score
--- progress and the client can render the QUEST panel from the same data.
--- Chapters run in order; each step pays cash when its counter reaches its target.
+-- QuestCatalog: the quest chapters and the rotating Bonus Board.
+-- Each quest watches one event counter (see QuestSystem.OnEvent). Chapter
+-- steps run in order and count from the moment the step begins; the Bonus
+-- Board keeps three quests live and refills a finished slot with a harder one.
 
 local QuestCatalog = {}
 
--- key: the event counter this step watches. target: how many. reward: cash.
+-- key: the event counter the quest watches. target: how many. reward: cash.
 QuestCatalog.CHAPTERS = {
 	{
 		title = "Murid Baru",
 		steps = {
-			{ key = "bought", target = 1, text = "Buy your first brainrot", reward = 150 },
-			{ key = "placed", target = 1, text = "Place a brainrot in your classroom", reward = 200 },
-			{ key = "locked", target = 1, text = "Lock your base once", reward = 250 },
+			{ key = "buy", target = 1, text = "Buy a brainrot from the Parade", reward = 150 },
+			{ key = "place", target = 1, text = "Bring it home to your classroom", reward = 200 },
+			{ key = "earn", target = 300, text = "Earn $300 from your brainrots", reward = 250 },
+			{ key = "lock", target = 1, text = "Lock your base once [L]", reward = 300 },
 		},
 	},
 	{
-		title = "Naik Kelas",
+		title = "Anak Nakal",
 		steps = {
-			{ key = "stole", target = 1, text = "Steal a brainrot from a rival", reward = 800 },
-			{ key = "grappled", target = 1, text = "Pull or push a carrier", reward = 600 },
-			{ key = "placed", target = 5, text = "Place 5 brainrots in total", reward = 1000 },
+			{ key = "pull", target = 1, text = "PULL a student or thief [Q]", reward = 500 },
+			{ key = "push", target = 1, text = "PUSH a student or thief [F]", reward = 500 },
+			{ key = "knockLoose", target = 1, text = "Knock a carried brainrot loose", reward = 800 },
+			{ key = "steal", target = 1, text = "Press [E] to STEAL from a rival", reward = 1000 },
+		},
+	},
+	{
+		title = "Juara Kelas",
+		steps = {
+			{ key = "rush", target = 1, text = "Survive a Lunch Rush in your base", reward = 1500 },
+			{ key = "upgrade", target = 1, text = "Buy any upgrade", reward = 1500 },
+			{ key = "gacha", target = 1, text = "Roll the Gacha Machine", reward = 2000 },
+			{ key = "earn", target = 10000, text = "Earn $10K", reward = 3000 },
 		},
 	},
 	{
 		title = "Bintang Sekolah",
 		steps = {
-			{ key = "rebirthed", target = 1, text = "Rebirth once", reward = 3000 },
-			{ key = "ownedCount", target = 30, text = "Own 30 different brainrots", reward = 5000 },
-			{ key = "stole", target = 3, text = "Steal 3 brainrots in total", reward = 4000 },
+			{ key = "steal", target = 3, text = "Steal 3 brainrots", reward = 5000 },
+			{ key = "fuse", target = 1, text = "Fuse 3 brainrots in the Fuse Lab", reward = 5000 },
+			{ key = "ownedCount", target = 20, text = "Collect 20 different brainrots", reward = 8000 },
+			{ key = "rebirth", target = 1, text = "Rebirth once", reward = 10000 },
 		},
 	},
 }
 
--- Daily quests rotate by day of year: three a day, drawn from this pool.
-QuestCatalog.DAILY_POOL = {
-	{ key = "dailyBuy", target = 3, text = "Buy 3 brainrots", reward = 500 },
-	{ key = "dailySteal", target = 1, text = "Steal 1 brainrot", reward = 1000 },
-	{ key = "dailyEarn", target = 5000, text = "Earn $5,000", reward = 600 },
-	{ key = "dailyPlace", target = 3, text = "Place 3 brainrots", reward = 600 },
-	{ key = "dailyGrapple", target = 3, text = "Pull or push 3 times", reward = 700 },
-	{ key = "dailyRare", target = 1, text = "Buy a Rare brainrot or better", reward = 1200 },
+-- The Bonus Board pool. A finished slot draws the next quest in the pool,
+-- one tier harder each lap: target x2, reward x2.
+QuestCatalog.BONUS_POOL = {
+	{ key = "buy", target = 3, text = "Buy %d brainrots", reward = 400 },
+	{ key = "pull", target = 2, text = "Pull %d students or thieves", reward = 500 },
+	{ key = "earn", target = 2000, text = "Earn $%d", reward = 500 },
+	{ key = "push", target = 2, text = "Push %d students or thieves", reward = 500 },
+	{ key = "recover", target = 1, text = "Grab %d dropped brainrots", reward = 600 },
+	{ key = "steal", target = 1, text = "Steal %d brainrots", reward = 900 },
+	{ key = "arenaDrop", target = 1, text = "Win %d Arena Drops", reward = 1200 },
+	{ key = "sit", target = 1, text = "Rest on a bench or swing %dx", reward = 300 },
+	{ key = "knockLoose", target = 2, text = "Knock %d brainrots loose", reward = 900 },
 }
+QuestCatalog.BONUS_SLOTS = 3
 
--- The three daily quests for a given day of year. Deterministic, so the
--- server and the client always agree without an extra remote call.
-function QuestCatalog.GetDailyQuests(dayOfYear)
-	local picked = {}
-	for i = 1, 3 do
-		local index = (dayOfYear + i * 2 - 1) % #QuestCatalog.DAILY_POOL + 1
-		table.insert(picked, QuestCatalog.DAILY_POOL[index])
-	end
-	return picked
+-- The Bonus Board quest at a pool position. Lap 0 is the base target.
+function QuestCatalog.GetBonusQuest(poolIndex)
+	local count = #QuestCatalog.BONUS_POOL
+	local definition = QuestCatalog.BONUS_POOL[(poolIndex - 1) % count + 1]
+	local lap = math.floor((poolIndex - 1) / count)
+	local scale = 2 ^ lap
+	local target = math.floor(definition.target * scale)
+	return {
+		key = definition.key,
+		target = target,
+		text = string.format(definition.text, target),
+		reward = math.floor(definition.reward * scale),
+	}
 end
-
--- Tier ranks, for the "Rare or better" daily quest.
-QuestCatalog.RARITY_RANK = {
-	Common = 1,
-	Uncommon = 2,
-	Rare = 3,
-	Epic = 4,
-	Legendary = 5,
-	Mythic = 6,
-	Divine = 7,
-	Secret = 8,
-	Celestial = 9,
-	Galactic = 10,
-	Eternal = 11,
-	Godly = 12,
-	Supreme = 13,
-	Ultimate = 14,
-	PRINCIPAL = 15,
-}
 
 return QuestCatalog
