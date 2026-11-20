@@ -154,7 +154,8 @@ function CarrySystem.TakeIntoHands(state, record)
 	record.droppedAt = nil
 	weldTo(record, root)
 	table.insert(state.carrying, record)
-	G.Factory.SetStatus(record.model, "CARRIED BY " .. string.upper(state.name), Color3.fromRGB(255, 220, 90))
+	-- One short word on the plate: the carrier's own name tag says who.
+	G.Factory.SetStatus(record.model, "CARRIED", Color3.fromRGB(255, 220, 90))
 	G.State.MarkOwned(state, record.catalogId)
 	G.Quests.SyncCounters(state)
 	G.Economy.ApplyWalkSpeed(state)
@@ -198,8 +199,11 @@ function CarrySystem.Drop(record, position, lastCarrier)
 	record.status = "dropped"
 	record.droppedAt = now()
 	record.lastCarrier = lastCarrier
-	G.Factory.SetStatus(record.model, "DROPPED · [E] GRAB", Color3.fromRGB(255, 220, 90))
-	local prompt = G.Factory.AttachGrabPrompt(record.model, G.Factory.DescribeRecord(record))
+	-- One clean status line: the prompt below already shows [E] Grab, so the
+	-- plate must not repeat it, and the prompt shows the name only — the
+	-- plate above already carries the rarity and dollars per second.
+	G.Factory.SetStatus(record.model, "DROPPED", Color3.fromRGB(255, 220, 90))
+	local prompt = G.Factory.AttachGrabPrompt(record.model, record.name)
 	table.insert(record.connections, prompt.Triggered:Connect(function(player)
 		local state = G.State.Get(player)
 		if state and record.status == "dropped" and CarrySystem.TakeIntoHands(state, record) then

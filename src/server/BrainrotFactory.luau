@@ -58,14 +58,17 @@ end
 
 -- The floating plate: name, tier and dollars a second, plus a status line
 -- (price on the parade, STEAL on a rival base). Sized in studs so it shrinks
--- with distance instead of covering the screen; hidden past 80 studs.
+-- with distance instead of covering the screen; hidden past 60 studs.
+-- Kept deliberately small (5 x 1.9 studs): parade brainrots walk close
+-- together, and a tall plate covers its neighbour's plate. The plate floats
+-- well above the model so the [E] prompt bubble never covers the price line.
 local function buildLabel(entry, mutation, statusText, height)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
-	gui.Size = UDim2.new(7, 0, 2.7, 0)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, height + 1.7, 0)
+	gui.Size = UDim2.new(5, 0, 1.9, 0)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, height + 2.5, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 80
+	gui.MaxDistance = 60
 	gui.LightInfluence = 0
 	gui.ResetOnSpawn = false
 
@@ -298,8 +301,11 @@ end
 
 -- Press [E] Steal for thieves, Press [E] Sell for the owner. The client hides
 -- whichever prompt is not for you (OwnerUserId / OwnerOnly attributes).
+-- The prompt shows the name only: the plate above already carries the
+-- rarity, income and price, so repeating them here would stack two long
+-- texts on top of each other.
 function BrainrotFactory.AttachBasePrompts(model, record, ownerUserId, ownerIsBot)
-	local steal = newPrompt(model, "StealPrompt", "Steal", BrainrotFactory.DescribeRecord(record), Config.STEAL_HOLD, Config.STEAL_RANGE)
+	local steal = newPrompt(model, "StealPrompt", "Steal", record.name, Config.STEAL_HOLD, Config.STEAL_RANGE)
 	steal:SetAttribute("OwnerUserId", ownerUserId)
 	local sell = nil
 	if not ownerIsBot then

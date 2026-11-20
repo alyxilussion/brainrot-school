@@ -113,9 +113,11 @@ local function spawnOnPad(pad, weights, label, questKey)
 	end
 	local entry = rollEntry(weights, serverLuck())
 	local mutation = Catalog.RollMutation(rng, serverLuck() + 1)
-	local record = G.Carry.NewRecord(entry, mutation, pad.top * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), "pad", { scale = 1.2, status = "FREE · [E] GRAB" })
+	local record = G.Carry.NewRecord(entry, mutation, pad.top * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), "pad", { scale = 1.2, status = "FREE" })
 	pad.occupiedUid = record.uid
-	local prompt = G.Factory.AttachGrabPrompt(record.model, G.Factory.DescribeRecord(record))
+	-- The prompt shows the name only: the plate above already carries the
+	-- rarity and dollars per second, and the prompt itself shows [E] Grab.
+	local prompt = G.Factory.AttachGrabPrompt(record.model, record.name)
 	table.insert(record.connections, prompt.Triggered:Connect(function(player)
 		local state = G.State.Get(player)
 		if state and record.status == "pad" and G.Carry.TakeIntoHands(state, record) then
