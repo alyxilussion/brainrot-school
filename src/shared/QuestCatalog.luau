@@ -62,7 +62,7 @@ QuestCatalog.RARITY_RANK = {
 	Legendary = 5,
 	Mythic = 6,
 	Divine = 7,
-	Secret = 8,
+	Hidden = 8,
 	Celestial = 9,
 	Galactic = 10,
 	Eternal = 11,
@@ -70,6 +70,7 @@ QuestCatalog.RARITY_RANK = {
 	Supreme = 13,
 	Ultimate = 14,
 	PRINCIPAL = 15,
+	Secret = 16,
 }
 
 return QuestCatalog

@@ -9,7 +9,9 @@ Config.GROUND_Y = 0.4
 -- Starting money for a new student.
 Config.START_CASH = 100
 
--- The 15-tier ladder, weakest first. Income and cost live in BrainrotCatalog.
+-- The 16-tier ladder, weakest first. Income and cost live in BrainrotCatalog.
+-- Tier 8 used to be called Secret; it is Hidden now, and Secret is the new
+-- top tier, home to the twenty rarest brainrots in the school.
 Config.RARITY_ORDER = {
 	"Common",
 	"Uncommon",
@@ -18,7 +20,7 @@ Config.RARITY_ORDER = {
 	"Legendary",
 	"Mythic",
 	"Divine",
-	"Secret",
+	"Hidden",
 	"Celestial",
 	"Galactic",
 	"Eternal",
@@ -26,6 +28,7 @@ Config.RARITY_ORDER = {
 	"Supreme",
 	"Ultimate",
 	"PRINCIPAL",
+	"Secret",
 }
 
 -- One readable colour per tier, used for labels, pedestal rings and the Report Card.
@@ -37,7 +40,7 @@ Config.RARITY_COLORS = {
 	Legendary = Color3.fromRGB(245, 180, 30),
 	Mythic = Color3.fromRGB(235, 70, 60),
 	Divine = Color3.fromRGB(60, 230, 210),
-	Secret = Color3.fromRGB(200, 200, 220),
+	Hidden = Color3.fromRGB(200, 200, 220),
 	Celestial = Color3.fromRGB(150, 225, 255),
 	Galactic = Color3.fromRGB(130, 90, 255),
 	Eternal = Color3.fromRGB(50, 210, 140),
@@ -45,6 +48,7 @@ Config.RARITY_COLORS = {
 	Supreme = Color3.fromRGB(255, 70, 150),
 	Ultimate = Color3.fromRGB(255, 120, 50),
 	PRINCIPAL = Color3.fromRGB(255, 255, 255),
+	Secret = Color3.fromRGB(255, 85, 255),
 }
 
 -- Parade spawn weights. Luck upgrades tilt these toward the rare end.
@@ -56,7 +60,7 @@ Config.RARITY_WEIGHTS = {
 	Legendary = 4,
 	Mythic = 2.2,
 	Divine = 1.3,
-	Secret = 0.8,
+	Hidden = 0.8,
 	Celestial = 0.55,
 	Galactic = 0.35,
 	Eternal = 0.22,
@@ -64,6 +68,7 @@ Config.RARITY_WEIGHTS = {
 	Supreme = 0.09,
 	Ultimate = 0.05,
 	PRINCIPAL = 0.02,
+	Secret = 0.005,
 }
 
 -- Gacha weights: a little kinder than the parade, so a roll feels worth $1,000.
@@ -75,7 +80,7 @@ Config.GACHA_WEIGHTS = {
 	Legendary = 7,
 	Mythic = 4.5,
 	Divine = 3,
-	Secret = 2,
+	Hidden = 2,
 	Celestial = 1.4,
 	Galactic = 0.9,
 	Eternal = 0.6,
@@ -83,13 +88,14 @@ Config.GACHA_WEIGHTS = {
 	Supreme = 0.15,
 	Ultimate = 0.08,
 	PRINCIPAL = 0.02,
+	Secret = 0.01,
 }
 
 -- High-pad weights: only Mythic and better ever appear on the high places.
 Config.HIGH_PAD_WEIGHTS = {
 	Mythic = 34,
 	Divine = 22,
-	Secret = 15,
+	Hidden = 15,
 	Celestial = 11,
 	Galactic = 8,
 	Eternal = 5,

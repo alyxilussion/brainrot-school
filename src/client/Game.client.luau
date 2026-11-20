@@ -117,7 +117,8 @@ specLabel.BackgroundTransparency = 1
 specLabel.Font = Enum.Font.GothamBold
 specLabel.TextSize = 13
 specLabel.TextColor3 = GREY
-specLabel.Text = "60 BRAINROTS  ·  15 TIERS  ·  5 MUTATIONS  ·  PULL  ·  PUSH  ·  QUEST"
+specLabel.TextScaled = true
+specLabel.Text = "80 BRAINROTS  ·  16 TIERS  ·  5 MUTATIONS  ·  PULL  ·  PUSH  ·  STEAL  ·  LOCK  ·  REBIRTH  ·  GACHA  ·  FUSE"
 specLabel.Parent = topBar
 
 -- Event banner: the Lunch Rush countdown and the rush itself.
@@ -302,7 +303,7 @@ local function showNotify(text, kind)
 	end)
 end
 
--- Report Card: the 40-entry collection grid, built once from the catalog.
+-- Report Card: the 80-entry collection grid, built once from the catalog.
 local reportFrame = Instance.new("Frame")
 reportFrame.Name = "ReportCard"
 reportFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -323,7 +324,7 @@ reportTitle.Font = Enum.Font.FredokaOne
 reportTitle.TextSize = 24
 reportTitle.TextColor3 = GOLD
 reportTitle.TextXAlignment = Enum.TextXAlignment.Left
-reportTitle.Text = "REPORT CARD  —  0/40"
+reportTitle.Text = "REPORT CARD  —  0/80"
 reportTitle.Parent = reportFrame
 
 local reportBonus = Instance.new("TextLabel")
@@ -514,7 +515,7 @@ gachaDesc.TextColor3 = GREY
 gachaDesc.TextXAlignment = Enum.TextXAlignment.Left
 gachaDesc.TextYAlignment = Enum.TextYAlignment.Top
 gachaDesc.TextWrapped = true
-gachaDesc.Text = "One roll: $1,000. A random brainrot — any of the 15 tiers — goes straight to a free pedestal in your classroom. Higher tiers are rarer!"
+gachaDesc.Text = "One roll: $1,000. A random brainrot — any of the 16 tiers, even Secret — goes straight to a free pedestal in your classroom. Higher tiers are rarer!"
 gachaDesc.Parent = gachaFrame
 
 local gachaCashLabel = Instance.new("TextLabel")

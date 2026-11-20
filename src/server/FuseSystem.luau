@@ -1,7 +1,8 @@
 -- FuseSystem: the Fuse Lab by the gym. Pick three brainrots of the same tier
 -- from your classroom and fuse them into one random brainrot of the next tier.
 -- The three brainrots are the cost — the fuse itself is free. Three PRINCIPAL
--- brainrots fuse into a random PRINCIPAL with a random mutation.
+-- brainrots fuse into a random Secret, and three Secret fuse into a random
+-- Secret with a random mutation: Secret is the top of the ladder.
 
 local HttpService = game:GetService("HttpService")
 
@@ -63,7 +64,7 @@ function FuseSystem.TryFuse(player, pedestalIds)
 		end
 		tier = record.rarity
 	end
-	-- The result: one tier up, or a mutated PRINCIPAL at the top of the ladder.
+	-- The result: one tier up, or a mutated Secret at the top of the ladder.
 	local nextTier = Catalog.NextTier(tier)
 	local entry
 	local mutation = nil

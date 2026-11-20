@@ -545,8 +545,11 @@ function WorldBuilder.Build()
 		gachaPrompt = buildGachaMachine(),
 		fusePrompt = buildFuseLab(),
 		seats = buildArenaSeats(),
-		paradeStart = Vector3.new(-80, GROUND + 1.6, -60),
-		paradeEnd = Vector3.new(80, GROUND + 1.6, -60),
+		-- The parade points sit on the lane surface itself (the lane slab's
+		-- top is GROUND + 0.2); the Spawner lifts each brainrot by its own
+		-- half height so its base touches the lane exactly.
+		paradeStart = Vector3.new(-80, GROUND + 0.2, -60),
+		paradeEnd = Vector3.new(80, GROUND + 0.2, -60),
 		treeTop = Vector3.new(-112, GROUND + 39, 35),
 		fieldCenter = Vector3.new(0, GROUND, 10),
 		spawnLocation = spawn,

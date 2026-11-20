@@ -57,6 +57,17 @@ function Spawner.RemoveHighPad(uid)
 	highPadRecords[uid] = nil
 end
 
+-- How far the model's lowest point sits below its pivot. The pivot is the
+-- body centre, so this is the body's half height plus anything hanging
+-- below it; measured from the bounding box so it stays right whatever the
+-- factory builds. Call it while the model still stands at the origin,
+-- before its first PivotTo: then the pivot sits at world (0, 0, 0) and the
+-- box bottom's distance below the pivot is exactly this number.
+local function pivotToBaseLift(model)
+	local boxCFrame, boxSize = model:GetBoundingBox()
+	return boxSize.Y / 2 - boxCFrame.Position.Y
+end
+
 local function walkParade(record)
 	local world = WorldBuilder.GetWorld()
 	local startTime = os.clock()
@@ -64,7 +75,8 @@ local function walkParade(record)
 		local elapsed = os.clock() - startTime
 		local alpha = math.min(1, elapsed / Config.PARADE_WALK_TIME)
 		local position = world.paradeStart:Lerp(world.paradeEnd, alpha)
-		record.model:PivotTo(CFrame.new(position) * CFrame.Angles(0, math.rad(90), 0))
+		local lifted = position + Vector3.new(0, record.lift or 0, 0)
+		record.model:PivotTo(CFrame.new(lifted) * CFrame.Angles(0, math.rad(90), 0))
 		if alpha >= 1 then
 			break
 		end
@@ -85,8 +97,13 @@ local function spawnParadeBrainrot()
 
 	local model = BrainrotFactory.Build(entry, mutation, uid, true)
 	local world = WorldBuilder.GetWorld()
-	model:PivotTo(CFrame.new(world.paradeStart))
 	model.Parent = paradeFolder
+	-- Lift the model so its base rests exactly on the lane: without this
+	-- the pivot (the body centre) sits on the surface and the lower half
+	-- of the brainrot sinks into the ground. Measured before the first
+	-- PivotTo, while the model still stands at the origin.
+	local lift = pivotToBaseLift(model)
+	model:PivotTo(CFrame.new(world.paradeStart + Vector3.new(0, lift, 0)))
 
 	local record = {
 		uid = uid,
@@ -96,6 +113,7 @@ local function spawnParadeBrainrot()
 		mutation = mutation,
 		model = model,
 		alive = true,
+		lift = lift,
 	}
 	parade[uid] = record
 
