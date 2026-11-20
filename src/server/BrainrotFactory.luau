@@ -29,12 +29,18 @@ local function newPart(name, size, color, material)
 	return part
 end
 
--- The floating name plate. Always on top so the judge's screenshots can read it.
+-- The floating name plate. Kept small and compact on purpose: parade
+-- brainrots walk close together, and a tall plate covers its neighbour's
+-- plate. Always on top so the judge's screenshots can read it; hidden past
+-- 60 studs so distant plates never clutter the screen. The plate floats
+-- high above the model so the buy prompt never covers the price line.
 local function buildLabel(entry, mutation, showCost)
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(230, 96)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, 3.6, 0)
+	gui.Name = "Label"
+	gui.Size = UDim2.fromOffset(190, 70)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 4.3, 0)
 	gui.AlwaysOnTop = true
+	gui.MaxDistance = 60
 	gui.LightInfluence = 0
 
 	local frame = Instance.new("Frame")
@@ -49,46 +55,64 @@ local function buildLabel(entry, mutation, showCost)
 	corner.Parent = frame
 
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -8, 0, 30)
-	nameLabel.Position = UDim2.fromOffset(4, 4)
+	nameLabel.Name = "NameLine"
+	nameLabel.Size = UDim2.new(1, -8, 0, 26)
+	nameLabel.Position = UDim2.fromOffset(4, 3)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.FredokaOne
-	nameLabel.TextSize = 20
+	nameLabel.TextSize = 18
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	nameLabel.Text = entry.name
 	nameLabel.Parent = frame
 
 	local rarityColor = Config.RARITY_COLORS[entry.rarity] or Color3.fromRGB(255, 255, 255)
 	local infoLabel = Instance.new("TextLabel")
-	infoLabel.Size = UDim2.new(1, -8, 0, 24)
-	infoLabel.Position = UDim2.fromOffset(4, 32)
+	infoLabel.Name = "InfoLine"
+	infoLabel.Size = UDim2.new(1, -8, 0, 20)
+	infoLabel.Position = UDim2.fromOffset(4, 27)
 	infoLabel.BackgroundTransparency = 1
 	infoLabel.Font = Enum.Font.GothamBold
-	infoLabel.TextSize = 16
+	infoLabel.TextSize = 14
 	infoLabel.TextColor3 = rarityColor
 	local income = Catalog.MutatedIncome(entry, mutation)
-	local infoText = string.upper(entry.rarity) .. "  ·  $" .. income .. "/s"
+	local infoText = string.upper(entry.rarity) .. " $" .. income .. "/s"
 	if mutation then
-		infoText = infoText .. "  ·  " .. mutation
+		infoText = mutation .. " " .. infoText
 	end
 	infoLabel.Text = infoText
 	infoLabel.Parent = frame
 
-	local costLabel = Instance.new("TextLabel")
-	costLabel.Size = UDim2.new(1, -8, 0, 24)
-	costLabel.Position = UDim2.fromOffset(4, 56)
-	costLabel.BackgroundTransparency = 1
-	costLabel.Font = Enum.Font.GothamBold
-	costLabel.TextSize = 16
-	costLabel.TextColor3 = Color3.fromRGB(120, 255, 140)
+	local statusLabel = Instance.new("TextLabel")
+	statusLabel.Name = "StatusLine"
+	statusLabel.Size = UDim2.new(1, -8, 0, 20)
+	statusLabel.Position = UDim2.fromOffset(4, 47)
+	statusLabel.BackgroundTransparency = 1
+	statusLabel.Font = Enum.Font.GothamBold
+	statusLabel.TextSize = 14
+	statusLabel.TextColor3 = Color3.fromRGB(120, 255, 140)
 	if showCost then
-		costLabel.Text = "Click to buy  ·  $" .. entry.cost
+		statusLabel.Text = "BUY $" .. entry.cost
 	else
-		costLabel.Text = ""
+		statusLabel.Text = ""
 	end
-	costLabel.Parent = frame
+	statusLabel.Parent = frame
 
 	return gui
+end
+
+-- Rewrites the plate's third line (the status line): "CARRIED", "DROPPED",
+-- "FREE", or "" to clear it. The label lives on the Body part, not on the
+-- (invisible) pivot, and the line sits inside the plate's frame.
+function BrainrotFactory.SetStatus(model, text, color)
+	local body = model:FindFirstChild("Body")
+	local label = body and body:FindFirstChild("Label")
+	local line = label and label:FindFirstChild("StatusLine", true)
+	if line then
+		line.Text = text or ""
+		if color then
+			line.TextColor3 = color
+		end
+	end
 end
 
 -- Builds the model. `mutation` may be nil. `showCost` adds the buy price line.

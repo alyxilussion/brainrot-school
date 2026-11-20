@@ -14,6 +14,7 @@ local RemoteHub = require(script.Parent.RemoteHub)
 local Spawner = require(script.Parent.Spawner)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 local QuestSystem = require(script.Parent.QuestSystem)
+local BrainrotFactory = require(script.Parent.BrainrotFactory)
 
 local CarrySystem = {}
 
@@ -97,6 +98,8 @@ local function takeIntoHands(player, state, record)
 	end
 	table.insert(state.carried, record)
 	state.owned[record.catalogId] = true
+	-- One short word on the plate: the carrier's own name tag says who.
+	BrainrotFactory.SetStatus(record.model, "CARRIED", Color3.fromRGB(255, 220, 90))
 	return true
 end
 
@@ -202,6 +205,9 @@ function CarrySystem.DropCarried(player, record, atPosition)
 	record.model:PivotTo(CFrame.new(spot.X, Config.GROUND_Y + 1.6, spot.Z))
 	record.model.Parent = workspace
 	dropped[record.uid] = record
+	-- One clean status line: what it is and how to take it. The grab is a
+	-- click here (no [E] prompt), so the line says so exactly once.
+	BrainrotFactory.SetStatus(record.model, "DROPPED · CLICK TO GRAB", Color3.fromRGB(255, 150, 90))
 	-- The ClickDetector lives on the Body part, not on the (invisible) pivot.
 	local bodyPart = record.model:FindFirstChild("Body")
 	local clicker = bodyPart and bodyPart:FindFirstChild("Clicker")
@@ -248,6 +254,9 @@ function CarrySystem.PlaceRecordOnPedestal(player, state, record, base, pedestal
 	record.model:PivotTo(CFrame.new(pedestal.position + Vector3.new(0, 1.6, 0)))
 	record.model.Parent = workspace
 	record.pedestalId = pedestal.id
+	-- Placed brainrots need no status line: name + income is the whole
+	-- story, and the steal prompt carries its own [E] STEAL text.
+	BrainrotFactory.SetStatus(record.model, "")
 	state.placed[pedestal.id] = record
 	pedestal.top.Color = Config.RARITY_COLORS[record.rarity] or Color3.fromRGB(200, 200, 200)
 	if CarrySystem.OnPlaced then

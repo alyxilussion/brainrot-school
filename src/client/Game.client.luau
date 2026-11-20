@@ -227,6 +227,7 @@ carryingLabel.Size = UDim2.fromOffset(480, 28)
 carryingLabel.BackgroundTransparency = 1
 carryingLabel.Font = Enum.Font.FredokaOne
 carryingLabel.TextSize = 20
+carryingLabel.TextScaled = true
 carryingLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
 carryingLabel.Text = ""
 carryingLabel.Visible = false
@@ -240,8 +241,9 @@ hintLabel.Size = UDim2.fromOffset(560, 22)
 hintLabel.BackgroundTransparency = 1
 hintLabel.Font = Enum.Font.GothamBold
 hintLabel.TextSize = 15
+hintLabel.TextScaled = true
 hintLabel.TextColor3 = WHITE
-hintLabel.Text = "[Q] PULL   ·   [F] PUSH   ·   [E] STEAL / SIT / GACHA / FUSE   ·   [L] LOCK   ·   Click a brainrot to buy it"
+hintLabel.Text = "[Q] PULL  ·  [F] PUSH  ·  [E] STEAL / SIT  ·  [L] LOCK  ·  [K] FUSE  ·  Click a brainrot to buy it"
 hintLabel.Parent = gui
 
 -- Bottom buttons: lock, rebirth, fuse, report card, upgrades.
@@ -376,6 +378,7 @@ for _, rarity in ipairs(Config.RARITY_ORDER) do
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.Font = Enum.Font.GothamBold
 		nameLabel.TextSize = 14
+		nameLabel.TextScaled = true
 		nameLabel.TextColor3 = WHITE
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Text = entry.name

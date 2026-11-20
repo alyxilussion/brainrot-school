@@ -111,7 +111,7 @@ function StealSystem.TrySteal(player, uid)
 	PlayerState.PushUpdate(thiefState)
 	PlayerState.PushUpdate(ownerState)
 	notify(player, "You stole " .. record.name .. "! Run home!", "good")
-	notify(owner, "Brainrot-mu dicuri! " .. player.Name .. " stole your " .. record.name .. "!", "alert")
+	notify(owner, "Your brainrot was stolen! " .. player.Name .. " stole your " .. record.name .. "!", "alert")
 	QuestSystem.OnEvent(player, "stole", { rarity = record.rarity })
 end
 

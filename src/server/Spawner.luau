@@ -140,6 +140,8 @@ local function spawnHighPadBrainrot(pad)
 	local model = BrainrotFactory.Build(entry, mutation, uid, false)
 	model:PivotTo(CFrame.new(pad.position + Vector3.new(0, 1.6, 0)))
 	model.Parent = paradeFolder
+	-- A high-pad brainrot is free for the taking; say so on its plate.
+	BrainrotFactory.SetStatus(model, "FREE", Color3.fromRGB(120, 255, 140))
 
 	local record = {
 		uid = uid,
