@@ -38,15 +38,15 @@ stampedes the field, and a naughty crow raids unlocked classrooms.
 - **Rival classmates:** NPC students Budi, Siti and Joko own classrooms of
   their own, with brainrots you can steal — and they send thieves to raid
   yours every 45 seconds.
-- **Quests:** four chapters of four steps each — Murid Baru, Anak Nakal, Juara
-  Kelas, Bintang Sekolah — plus a Bonus Board with three rotating quests that
+- **Quests:** four chapters of four steps each — New Student, Troublemaker,
+  Class Champion, School Star — plus a Bonus Board with three rotating quests that
   get harder (and pay more) every lap. Every chapter finished adds +5% income.
 - **Machines:** the Gacha Machine by the cafeteria (Press [E], $1,000 a roll
   for a random brainrot, kinder odds than the parade) and the Fuse Lab by the
   gym (Press [E], fuse three brainrots of one tier into one of the next; three
   PRINCIPALs fuse into a random Secret).
 - **Events:** the LUNCH RUSH! stampede every 100 seconds (15-second countdown,
-  shelter in your base) and Gagak Nakal, the crow thief, every 130 seconds.
+  shelter in your base) and the Naughty Crow, the crow thief, every 130 seconds.
   A base lock shields you from both.
 - **Rare spawns:** Mythic-or-better brainrots appear only on high places —
   the gym climbing wall, the big tree, the academy tower (every 45 seconds) —
@@ -66,7 +66,7 @@ stampedes the field, and a naughty crow raids unlocked classrooms.
   built from Parts), `ParadeSpawner` (parade, high pads, Arena Drop),
   `CarrySystem`, `StealSystem`, `PullPushSystem`, `QuestSystem`,
   `RivalSystem` (Budi, Siti, Joko + their thieves), `ThreatSystem` (Lunch
-  Rush + Gagak Nakal), `EconomySystem` (income tick, shop, Gacha, Fuse,
+  Rush + Naughty Crow), `EconomySystem` (income tick, shop, Gacha, Fuse,
   Rebirth, Fresh buff) and `PlayerState`. The server owns all state; the
   client only renders and asks.
 - `src/client/` — `Hud.client.luau` (money, quests, lock/rebirth/report-card/

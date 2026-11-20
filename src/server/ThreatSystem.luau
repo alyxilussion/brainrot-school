@@ -1,7 +1,7 @@
 -- ThreatSystem: the two school dangers. Lunch Rush: after a countdown a
 -- stampede of hungry students sweeps the yard north to south and tramples
 -- whoever it reaches (high ground and your own classroom are safe), so
--- carriers drop their loot. Gagak Nakal: the crow thief circles an unlocked
+-- carriers drop their loot. The Naughty Crow circles an unlocked
 -- classroom, warns its owner, then snatches a brainrot to the Big Tree nest.
 
 local Workspace = game:GetService("Workspace")
@@ -119,10 +119,10 @@ function ThreatSystem.RunLunchRush()
 	G.banner("The Lunch Rush passed. Back to stealing!", Color3.fromRGB(120, 255, 150), 3)
 end
 
--- Gagak Nakal: a crow built from parts, flapping between the nest and a base.
+-- The Naughty Crow: a crow built from parts, flapping between the nest and a base.
 local function buildCrow()
 	local model = Instance.new("Model")
-	model.Name = "GagakNakal"
+	model.Name = "NaughtyCrow"
 	local body = part(model, "Body", Vector3.new(2.4, 2, 3.6), CFrame.new(), Color3.fromRGB(30, 30, 40))
 	model.PrimaryPart = body
 	part(model, "Head", Vector3.new(1.6, 1.6, 1.6), CFrame.new(0, 0.8, -2.2), Color3.fromRGB(35, 35, 45))
@@ -143,7 +143,7 @@ local function buildCrow()
 	label.TextScaled = true
 	label.TextColor3 = Color3.fromRGB(255, 90, 90)
 	label.TextStrokeTransparency = 0
-	label.Text = "GAGAK NAKAL"
+	label.Text = "NAUGHTY CROW"
 	label.Parent = gui
 	gui.Parent = body
 	return model
@@ -190,7 +190,7 @@ function ThreatSystem.RunCrowRaid()
 	end
 	local base = G.World.GetBase(victim.baseIndex)
 	local world = G.World.GetWorld()
-	G.banner("GAGAK NAKAL IS FLYING TO " .. string.upper(victim.name) .. "'S CLASSROOM!", Color3.fromRGB(200, 80, 255), 5)
+	G.banner("NAUGHTY CROW IS FLYING TO " .. string.upper(victim.name) .. "'S CLASSROOM!", Color3.fromRGB(200, 80, 255), 5)
 	if not victim.isBot then
 		G.notify(victim, "The crow is coming! LOCK [L] your classroom NOW!", Color3.fromRGB(255, 90, 90))
 		G.fx("sound", "alarm", nil, victim)
@@ -212,7 +212,7 @@ function ThreatSystem.RunCrowRaid()
 		target = best
 	end
 	if not target then
-		G.banner("Gagak Nakal found nothing to take!", Color3.fromRGB(120, 255, 150), 3)
+		G.banner("Naughty Crow found nothing to take!", Color3.fromRGB(120, 255, 150), 3)
 		fly(crow, base.center + Vector3.new(0, 10, 0), world.treeTop + Vector3.new(0, 4, 0), 6)
 		crow:Destroy()
 		return
@@ -230,7 +230,7 @@ function ThreatSystem.RunCrowRaid()
 			carried:PivotTo(beak.CFrame * CFrame.new(0, -4.5, 0))
 		end
 	end)
-	G.banner("GAGAK NAKAL STOLE " .. string.upper(target.name) .. "! IT'S IN THE BIG TREE NEST!", Color3.fromRGB(200, 80, 255), 5)
+	G.banner("NAUGHTY CROW STOLE " .. string.upper(target.name) .. "! IT'S IN THE BIG TREE NEST!", Color3.fromRGB(200, 80, 255), 5)
 	fly(crow, base.center + Vector3.new(0, 10, 0), world.treeTop + Vector3.new(0, 4, 0), 8)
 	connection:Disconnect()
 	crow:Destroy()

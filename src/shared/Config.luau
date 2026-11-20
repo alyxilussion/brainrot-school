@@ -110,7 +110,7 @@ Config.HAZARD_INTERVAL = 100
 Config.HAZARD_COUNTDOWN = 15
 Config.HAZARD_SWEEP_TIME = 9
 
--- Gagak Nakal, the crow thief, raids an unlocked base this often.
+-- The Naughty Crow, the crow thief, raids an unlocked base this often.
 Config.CROW_INTERVAL = 130
 
 -- Rival classmates: NPC students who own bases and send thieves.
