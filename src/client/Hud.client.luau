@@ -222,13 +222,16 @@ end
 label(questCard, "Hint", "[J] all quests", UDim2.new(1, -20, 0, 12), UDim2.fromOffset(10, 196), MUTED, Enum.Font.Gotham, Enum.TextXAlignment.Right)
 
 ---------------------------------------------------------------------------
--- Left: classroom card (below the Roblox menu buttons).
+-- Bottom-left: classroom card. It used to sit at the left middle, where
+-- it covered the parade plates walking past it — transparency did not fix
+-- that, so the card moved. The bottom-left corner is empty grass in every
+-- camera angle, and the card's bottom edge sits 10px above the action bar,
+-- so it never covers the bar or the parade.
 ---------------------------------------------------------------------------
-local baseCard = card(gui, "ClassroomCard", UDim2.fromOffset(240, 158), UDim2.new(0, 10, 0.5, -40), Vector2.new(0, 0.5))
--- More see-through than the other cards on purpose: the parade lane runs
--- behind this corner of the screen, and a nearly-opaque panel hides the
--- brainrot plates walking past it. At 0.3 the plate text stays readable
--- through the panel while the card's own text keeps its contrast.
+local baseCard = card(gui, "ClassroomCard", UDim2.fromOffset(240, 158), UDim2.new(0, 10, 1, -116), Vector2.new(0, 1))
+-- Still a little see-through: at very narrow screens the carry bar can
+-- briefly cross this corner while carrying, and the card's own text keeps
+-- its contrast through it.
 baseCard.BackgroundTransparency = 0.3
 stroke(baseCard, Color3.fromRGB(120, 200, 255), 2)
 local baseTitle = label(baseCard, "Title", "CLASSROOM", UDim2.new(1, -20, 0, 26), UDim2.fromOffset(10, 6), Color3.fromRGB(120, 200, 255), Enum.Font.FredokaOne, Enum.TextXAlignment.Left)

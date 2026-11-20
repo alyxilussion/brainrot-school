@@ -56,26 +56,44 @@ local function newPart(model, name, shape, size, cframe, color, material)
 	return part
 end
 
--- The floating plate: name, tier and dollars a second, plus a status line
--- (price on the parade, STEAL on a rival base). Sized in studs so it shrinks
--- with distance instead of covering the screen; hidden past 60 studs.
--- Kept deliberately small (5 x 1.9 studs): parade brainrots walk close
--- together, and a tall plate covers its neighbour's plate. The plate floats
--- well above the model so the [E] prompt bubble never covers the price line.
+-- The floating plate: TWO lines only. Line 1 is the name; line 2 merges
+-- rarity, income and price ("GOLD COMMON $16/s · BUY $96"), or carries a
+-- state word alone ("CARRIED", "DROPPED") when the brainrot is not for
+-- sale. Sized in studs so it shrinks with distance instead of covering the
+-- screen; hidden past 45 studs so only nearby plates show. Kept short
+-- (6 x 1.3 studs): parade brainrots walk close together, and a tall plate
+-- covers its neighbour's plate. The [E] prompt bubble can never cover the
+-- price line now: prompts live on a PromptAnchor at the model's feet (see
+-- Build), while the plate floats high above the model.
+-- Composes line 2 from the info text and a status word. A state word
+-- (CARRIED, DROPPED) replaces the line: a carried or dropped brainrot is
+-- not for sale, so its price would be a lie. A commercial word (BUY $X,
+-- FREE, HOLD [E] STEAL) joins the info on the same line instead of
+-- growing a third one.
+local function lineTwoText(infoText, statusText)
+	if not statusText or statusText == "" then
+		return infoText
+	elseif statusText == "CARRIED" or statusText == "DROPPED" then
+		return statusText
+	else
+		return infoText .. " · " .. statusText
+	end
+end
+
 local function buildLabel(entry, mutation, statusText, height)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
-	gui.Size = UDim2.new(5, 0, 1.9, 0)
+	gui.Size = UDim2.new(6, 0, 1.3, 0)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, height + 2.5, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 60
+	gui.MaxDistance = 45
 	gui.LightInfluence = 0
 	gui.ResetOnSpawn = false
 
 	local rarityColor = Config.RARITY_COLORS[entry.rarity] or WHITE
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLine"
-	nameLabel.Size = UDim2.fromScale(1, 0.4)
+	nameLabel.Size = UDim2.fromScale(1, 0.55)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.FredokaOne
 	nameLabel.TextScaled = true
@@ -85,35 +103,27 @@ local function buildLabel(entry, mutation, statusText, height)
 	nameLabel.Text = entry.name
 	nameLabel.Parent = gui
 
+	local infoText = string.upper(entry.rarity) .. "  " .. Config.FormatMoney(Catalog.MutatedIncome(entry, mutation)) .. "/s"
+	if mutation then
+		infoText = mutation .. " " .. infoText
+	end
+	-- SetStatus rewrites line 2 later (CARRIED, DROPPED, HOLD [E] STEAL),
+	-- so the info text and its colour live on the plate itself.
+	gui:SetAttribute("InfoText", infoText)
+	gui:SetAttribute("InfoColor", rarityColor)
+
 	local infoLabel = Instance.new("TextLabel")
 	infoLabel.Name = "InfoLine"
-	infoLabel.Size = UDim2.fromScale(1, 0.3)
-	infoLabel.Position = UDim2.fromScale(0, 0.4)
+	infoLabel.Size = UDim2.fromScale(1, 0.45)
+	infoLabel.Position = UDim2.fromScale(0, 0.55)
 	infoLabel.BackgroundTransparency = 1
 	infoLabel.Font = Enum.Font.GothamBlack
 	infoLabel.TextScaled = true
 	infoLabel.TextColor3 = rarityColor
 	infoLabel.TextStrokeTransparency = 0
 	infoLabel.TextStrokeColor3 = DARK
-	local infoText = string.upper(entry.rarity) .. "  " .. Config.FormatMoney(Catalog.MutatedIncome(entry, mutation)) .. "/s"
-	if mutation then
-		infoText = mutation .. " " .. infoText
-	end
-	infoLabel.Text = infoText
+	infoLabel.Text = lineTwoText(infoText, statusText)
 	infoLabel.Parent = gui
-
-	local statusLabel = Instance.new("TextLabel")
-	statusLabel.Name = "StatusLine"
-	statusLabel.Size = UDim2.fromScale(1, 0.28)
-	statusLabel.Position = UDim2.fromScale(0, 0.71)
-	statusLabel.BackgroundTransparency = 1
-	statusLabel.Font = Enum.Font.GothamBlack
-	statusLabel.TextScaled = true
-	statusLabel.TextColor3 = Color3.fromRGB(120, 255, 140)
-	statusLabel.TextStrokeTransparency = 0
-	statusLabel.TextStrokeColor3 = DARK
-	statusLabel.Text = statusText or ""
-	statusLabel.Parent = gui
 	return gui
 end
 
@@ -184,6 +194,15 @@ function BrainrotFactory.Build(entry, mutation, uid, opts)
 	pivotPart.CanQuery = false
 	pivotPart.CastShadow = false
 	model.PrimaryPart = pivotPart
+	-- The prompt anchor: an invisible part at the feet. Every ProximityPrompt
+	-- on this brainrot (Buy, Grab, Steal, Sell) hangs from it, so the [E]
+	-- bubble renders at ground level, far below the floating plate. (The
+	-- bubble used to hang from the pivot at body height, where it covered
+	-- the plate's price line no matter how high the plate floated.)
+	local promptAnchor = newPart(model, "PromptAnchor", Enum.PartType.Block, sized(Vector3.new(0.1, 0.1, 0.1)), at(Vector3.new(0, 0.25, 0)), entry.body)
+	promptAnchor.Transparency = 1
+	promptAnchor.CanQuery = false
+	promptAnchor.CastShadow = false
 	if shapeKey == "Wedge" then
 		-- A dorsal fin on top: sharks, snakes and birds read as such.
 		local fin = Instance.new("WedgePart")
@@ -264,16 +283,20 @@ function BrainrotFactory.Build(entry, mutation, uid, opts)
 	return model
 end
 
--- Sets the label's third line, e.g. "BUY $60" or "HOLD [E] STEAL".
+-- Rewrites the plate's second line: a state word replaces it ("CARRIED",
+-- "DROPPED"), a commercial word joins the info on it ("BUY $60",
+-- "HOLD [E] STEAL"), and "" restores the info alone with its rarity colour.
 function BrainrotFactory.SetStatus(model, text, color)
 	-- The label lives on the Body part, not on the (invisible) pivot.
 	local body = model:FindFirstChild("Body")
 	local label = body and body:FindFirstChild("Label")
-	local line = label and label:FindFirstChild("StatusLine")
+	local line = label and label:FindFirstChild("InfoLine")
 	if line then
-		line.Text = text
+		line.Text = lineTwoText(label:GetAttribute("InfoText") or "", text)
 		if color then
 			line.TextColor3 = color
+		elseif not text or text == "" then
+			line.TextColor3 = label:GetAttribute("InfoColor") or WHITE
 		end
 	end
 end
@@ -289,7 +312,10 @@ local function newPrompt(model, name, actionText, objectText, holdDuration, rang
 	prompt.MaxActivationDistance = range
 	prompt.RequiresLineOfSight = false
 	prompt.Style = Enum.ProximityPromptStyle.Default
-	prompt.Parent = model.PrimaryPart
+	-- Hang the prompt from the feet, not the body centre: the bubble
+	-- renders at ground level, far below the floating plate.
+	local anchor = model:FindFirstChild("PromptAnchor")
+	prompt.Parent = anchor or model.PrimaryPart
 	return prompt
 end
 
