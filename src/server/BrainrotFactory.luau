@@ -36,7 +36,9 @@ end
 -- brainrots walk close together, and a tall plate covers its neighbour's
 -- plate. Always on top so the judge's screenshots can read it; hidden
 -- past 45 studs so only nearby plates show. Both lines are TextScaled, so
--- a long name or a long price line shrinks instead of clipping.
+-- a long name or a long price line shrinks instead of clipping. The plate
+-- hangs from the HeadAnchor part above the model (see Build) with no
+-- offset, so it sits exactly above the head from any camera angle.
 -- Composes line 2 from the info text and a status word. A state word
 -- (CARRIED, DROPPED...) replaces the line: a carried or dropped brainrot
 -- is not for sale, so its price would be a lie. A commercial word (BUY
@@ -55,7 +57,13 @@ local function buildLabel(entry, mutation, showCost)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
 	gui.Size = UDim2.fromOffset(230, 52)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, 4.3, 0)
+	-- No offset at all: the plate hangs from the HeadAnchor part above
+	-- the model (see Build), so its position IS the anchor's position —
+	-- exactly above the head, from any camera angle and any facing. (It
+	-- used to hang from the Body with a world-space offset, but in the
+	-- live game it rendered beside the body at mid height instead of
+	-- above the head, so the offset is gone for good.)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 45
 	gui.LightInfluence = 0
@@ -112,11 +120,12 @@ end
 -- Rewrites the plate's second line: a state word replaces it ("CARRIED",
 -- "DROPPED · CLICK TO GRAB"), a commercial word joins the info on it
 -- ("FREE"), and "" restores the info alone with its rarity colour. The
--- label lives on the Body part, not on the (invisible) pivot, and the
--- line sits inside the plate's frame.
+-- label lives on the HeadAnchor part above the model, not on the Body
+-- (and not on the invisible pivot), and the line sits inside the
+-- plate's frame.
 function BrainrotFactory.SetStatus(model, text, color)
-	local body = model:FindFirstChild("Body")
-	local label = body and body:FindFirstChild("Label")
+	local anchor = model:FindFirstChild("HeadAnchor")
+	local label = anchor and anchor:FindFirstChild("Label")
 	local line = label and label:FindFirstChild("InfoLine", true)
 	if line then
 		line.Text = lineTwoText(label:GetAttribute("InfoText") or "", text)
@@ -167,6 +176,20 @@ function BrainrotFactory.Build(entry, mutation, uid, showCost)
 	promptAnchor.CastShadow = false
 	promptAnchor.CFrame = CFrame.new(0, -halfHeight + 0.06, 0)
 	promptAnchor.Parent = model
+	-- The head anchor: an invisible part above the model's tallest point
+	-- (the topper, which tops out near y 2.1). The floating name plate
+	-- hangs from it, so the label sits exactly above the head from any
+	-- camera angle and any facing — parade, carried, dropped, pedestal
+	-- or high pad. It sits at y 4.3, the same height the plate was meant
+	-- to float at with its old offset. It extends the model's bounding
+	-- box upward, which is safe: the lift math (pivotToBaseLift in the
+	-- spawner) only reads the box BOTTOM.
+	local headAnchor = newPart("HeadAnchor", Vector3.new(0.1, 0.1, 0.1), entry.body, Enum.Material.SmoothPlastic)
+	headAnchor.Transparency = 1
+	headAnchor.CanQuery = false
+	headAnchor.CastShadow = false
+	headAnchor.CFrame = CFrame.new(0, 4.3, 0)
+	headAnchor.Parent = model
 
 	-- A bright topper on the head: the character's hat. Mutated brainrots get
 	-- a glowing topper in the mutation colour, so mutations read at a glance.
@@ -188,7 +211,7 @@ function BrainrotFactory.Build(entry, mutation, uid, showCost)
 	end
 
 	local label = buildLabel(entry, mutation, showCost)
-	label.Parent = body
+	label.Parent = headAnchor
 
 	-- Data the server reads back from the model.
 	local catalogValue = Instance.new("StringValue")
