@@ -62,9 +62,10 @@ end
 -- sale. Sized in studs so it shrinks with distance instead of covering the
 -- screen; hidden past 45 studs so only nearby plates show. Kept short
 -- (6 x 1.3 studs): parade brainrots walk close together, and a tall plate
--- covers its neighbour's plate. The [E] prompt bubble can never cover the
--- price line now: prompts live on a PromptAnchor at the model's feet (see
--- Build), while the plate floats high above the model.
+-- covers its neighbour's plate. The plate hangs from the HeadAnchor part
+-- above the model (see Build) with no offset, so it sits exactly above
+-- the head; the [E] prompt bubble can never cover the price line, because
+-- prompts live on a PromptAnchor at the model's feet.
 -- Composes line 2 from the info text and a status word. A state word
 -- (CARRIED, DROPPED) replaces the line: a carried or dropped brainrot is
 -- not for sale, so its price would be a lie. A commercial word (BUY $X,
@@ -80,11 +81,17 @@ local function lineTwoText(infoText, statusText)
 	end
 end
 
-local function buildLabel(entry, mutation, statusText, height)
+local function buildLabel(entry, mutation, statusText)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
 	gui.Size = UDim2.new(6, 0, 1.3, 0)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, height + 2.5, 0)
+	-- No offset at all: the plate hangs from the HeadAnchor part above
+	-- the model (see Build), so its position IS the anchor's position —
+	-- exactly above the head, from any camera angle and any facing. (It
+	-- used to hang from the Body with a world-space offset, but in the
+	-- live game it rendered beside the body at mid height instead of
+	-- above the head, so the offset is gone for good.)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 45
 	gui.LightInfluence = 0
@@ -203,6 +210,18 @@ function BrainrotFactory.Build(entry, mutation, uid, opts)
 	promptAnchor.Transparency = 1
 	promptAnchor.CanQuery = false
 	promptAnchor.CastShadow = false
+	-- The head anchor: an invisible part above the model's tallest point
+	-- (cap board or crown spikes, which top out near topY + 1). The
+	-- floating name plate hangs from it, so the label sits exactly above
+	-- the head from any camera angle and any facing — parade, carried,
+	-- dropped, pedestal or high pad. It sits 3.1 studs above topY, the
+	-- same height the plate was meant to float at with its old offset.
+	-- It extends the model's bounding box upward, which is safe: the
+	-- lift math (PivotToBaseLift) only reads the box BOTTOM.
+	local headAnchor = newPart(model, "HeadAnchor", Enum.PartType.Block, sized(Vector3.new(0.1, 0.1, 0.1)), at(Vector3.new(0, body.y + bodySize.Y / 2 + 3.1, 0)), entry.body)
+	headAnchor.Transparency = 1
+	headAnchor.CanQuery = false
+	headAnchor.CastShadow = false
 	if shapeKey == "Wedge" then
 		-- A dorsal fin on top: sharks, snakes and birds read as such.
 		local fin = Instance.new("WedgePart")
@@ -272,7 +291,7 @@ function BrainrotFactory.Build(entry, mutation, uid, opts)
 	end
 
 	if not opts.noLabel then
-		buildLabel(entry, mutation, opts.status, (topY + 0.6) * scale - body.y * scale).Parent = bodyPart
+		buildLabel(entry, mutation, opts.status).Parent = headAnchor
 	end
 
 	model.WorldPivot = origin
@@ -287,9 +306,10 @@ end
 -- "DROPPED"), a commercial word joins the info on it ("BUY $60",
 -- "HOLD [E] STEAL"), and "" restores the info alone with its rarity colour.
 function BrainrotFactory.SetStatus(model, text, color)
-	-- The label lives on the Body part, not on the (invisible) pivot.
-	local body = model:FindFirstChild("Body")
-	local label = body and body:FindFirstChild("Label")
+	-- The label lives on the HeadAnchor part above the model, not on
+	-- the Body (and not on the invisible pivot).
+	local anchor = model:FindFirstChild("HeadAnchor")
+	local label = anchor and anchor:FindFirstChild("Label")
 	local line = label and label:FindFirstChild("InfoLine")
 	if line then
 		line.Text = lineTwoText(label:GetAttribute("InfoText") or "", text)

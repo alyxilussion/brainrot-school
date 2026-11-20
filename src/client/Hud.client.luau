@@ -152,7 +152,10 @@ specText.ZIndex = 5
 -- at y 114, so the two never overlap).
 ---------------------------------------------------------------------------
 local banner = new("Frame", { Name = "EventBanner", Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 120), BackgroundColor3 = Color3.fromRGB(230, 60, 70), BorderSizePixel = 0, Visible = false }, gui)
-new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.15, 0.1), NumberSequenceKeypoint.new(0.85, 0.1), NumberSequenceKeypoint.new(1, 1) }) }, banner)
+-- The tint fades out over the outer 30% on each side, so the band never
+-- washes over the classroom name signs at the screen edges. The banner
+-- text is centred with a full dark stroke, so it reads fine on the fade.
+new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.1), NumberSequenceKeypoint.new(0.7, 0.1), NumberSequenceKeypoint.new(1, 1) }) }, banner)
 local bannerText = label(banner, "Text", "", UDim2.new(0.8, 0, 0.8, 0), UDim2.fromScale(0.1, 0.1), WHITE)
 bannerText.TextStrokeTransparency = 0
 local bannerToken = 0
