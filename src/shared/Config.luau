@@ -143,7 +143,7 @@ Config.HAZARD_INTERVAL = 90
 Config.HAZARD_COUNTDOWN = 15
 Config.HAZARD_SWEEP_TIME = 6
 
--- Gagak Nakal, the crow thief, visits an unlocked base this often.
+-- The Naughty Crow, the crow thief, visits an unlocked base this often.
 Config.CROW_INTERVAL = 120
 
 -- Base lock: shields the base this long, then must recharge before the next lock.

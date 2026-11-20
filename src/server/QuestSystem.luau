@@ -68,7 +68,7 @@ local function checkCompletions(player, state)
 			state.questChapter += 1
 			state.questStep = 1
 			if state.questChapter > #QuestCatalog.CHAPTERS then
-				notify(player, "You finished every chapter! Bintang Sekolah!", "quest")
+				notify(player, "You finished every chapter! School Star!", "quest")
 				state.questChapter = #QuestCatalog.CHAPTERS
 				state.questStep = #chapter.steps + 1
 				break

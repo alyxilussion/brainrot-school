@@ -117,7 +117,9 @@ local function spawnParadeBrainrot()
 	}
 	parade[uid] = record
 
-	local clicker = model.PrimaryPart:FindFirstChild("Clicker")
+	-- The ClickDetector lives on the Body part, not on the (invisible) pivot.
+	local bodyPart = model:FindFirstChild("Body")
+	local clicker = bodyPart and bodyPart:FindFirstChild("Clicker")
 	if clicker then
 		clicker.MouseClick:Connect(function(player)
 			if buyHandler then
@@ -151,7 +153,9 @@ local function spawnHighPadBrainrot(pad)
 	highPadRecords[uid] = record
 	pad.occupiedUid = uid
 
-	local clicker = model.PrimaryPart:FindFirstChild("Clicker")
+	-- The ClickDetector lives on the Body part, not on the (invisible) pivot.
+	local bodyPart = model:FindFirstChild("Body")
+	local clicker = bodyPart and bodyPart:FindFirstChild("Clicker")
 	if clicker then
 		clicker.MouseClick:Connect(function(player)
 			if grabHandler then

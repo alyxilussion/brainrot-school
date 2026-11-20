@@ -202,7 +202,9 @@ function CarrySystem.DropCarried(player, record, atPosition)
 	record.model:PivotTo(CFrame.new(spot.X, Config.GROUND_Y + 1.6, spot.Z))
 	record.model.Parent = workspace
 	dropped[record.uid] = record
-	local clicker = record.model.PrimaryPart:FindFirstChild("Clicker")
+	-- The ClickDetector lives on the Body part, not on the (invisible) pivot.
+	local bodyPart = record.model:FindFirstChild("Body")
+	local clicker = bodyPart and bodyPart:FindFirstChild("Clicker")
 	if clicker then
 		clicker.MouseClick:Connect(function(grabber)
 			CarrySystem.TryGrabDropped(grabber, record.uid)

@@ -23,7 +23,7 @@ Brainrots walk the Parade Lane past the academy — **click one to buy it**, car
 
 ## The cast — 80 brainrots, 16 tiers
 
-Every brainrot is an original school-or-forest character (Pensil Penguin, Buku Bebek, Tas Tupai, Kapur Kura, …), built from code — no downloaded models. Income roughly doubles every tier; the buy price is always 12× the income.
+Every brainrot is an original school-or-forest character (Pencil Penguin, Book Duck, Bag Squirrel, Chalk Turtle, …), built from code — no downloaded models. Income roughly doubles every tier; the buy price is always 12× the income.
 
 | Tier | Rarity | Income range |
 |---|---|---|
@@ -44,7 +44,7 @@ Every brainrot is an original school-or-forest character (Pensil Penguin, Buku B
 | 15 | PRINCIPAL | $81,920–$131,072/s |
 | 16 | Secret | $163,840–$786,432/s |
 
-Top earner: **Misteri Manta**, $786,432/s.
+Top earner: **Mystery Manta**, $786,432/s.
 
 ### Mutations
 
@@ -74,21 +74,21 @@ Three chapters in order, each step paying cash:
 
 | Chapter | Steps |
 |---|---|
-| **Murid Baru** | Buy your first brainrot (+$150) · Place one in your classroom (+$200) · Lock your base once (+$250) |
-| **Naik Kelas** | Steal a brainrot (+$800) · Pull or push a carrier (+$600) · Place 5 brainrots (+$1,000) |
-| **Bintang Sekolah** | Rebirth once (+$3,000) · Own 30 different brainrots (+$5,000) · Steal 3 brainrots (+$4,000) |
+| **New Student** | Buy your first brainrot (+$150) · Place one in your classroom (+$200) · Lock your base once (+$250) |
+| **Next Grade** | Steal a brainrot (+$800) · Pull or push a carrier (+$600) · Place 5 brainrots (+$1,000) |
+| **School Star** | Rebirth once (+$3,000) · Own 30 different brainrots (+$5,000) · Steal 3 brainrots (+$4,000) |
 
 Plus **3 daily quests a day**, drawn deterministically from a pool of 6 (buy 3, steal 1, earn $5,000, place 3, pull/push 3, buy Rare-or-better). The QUEST panel in the HUD tracks them live.
 
 ## Gacha + Fuse
 
-- **Gacha Machine** (near the cafeteria): flat **$1,000 per roll**, weighted toward the rare end, small mutation chance. The result goes straight to your classroom; blocked with "Base penuh!" when full.
+- **Gacha Machine** (near the cafeteria): flat **$1,000 per roll**, weighted toward the rare end, small mutation chance. The result goes straight to your classroom; blocked with "Base full!" when full.
 - **Fuse Lab** (near the gym): pick **3 brainrots of the same tier** and fuse them into **1 random brainrot of the next tier** — free, the three are the cost. Three PRINCIPAL brainrots fuse into a random Secret; three Secret fuse into a random Secret with a random mutation.
 
 ## Hazards
 
 - **LUNCH RUSH!** — every 90 seconds a 15-second countdown warns of the stampede, then it sweeps the field for 6 seconds. Shelter in your classroom.
-- **Gagak Nakal** — the naughty crow visits an unlocked classroom every 120 seconds and flies off with a brainrot. Lock up.
+- **Naughty Crow** — the naughty crow visits an unlocked classroom every 120 seconds and flies off with a brainrot. Lock up.
 - **Sit down:** benches and swings in the arena take [E] to sit — the **Fresh buff** pays +10% income for 60 seconds (3-minute cooldown).
 
 ## Progression

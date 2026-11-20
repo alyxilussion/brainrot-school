@@ -174,7 +174,7 @@ chapterLabel.Font = Enum.Font.GothamBold
 chapterLabel.TextSize = 15
 chapterLabel.TextColor3 = WHITE
 chapterLabel.TextXAlignment = Enum.TextXAlignment.Left
-chapterLabel.Text = "Chapter 1: Murid Baru"
+chapterLabel.Text = "Chapter 1: New Student"
 chapterLabel.Parent = questPanel
 
 local stepLabel = Instance.new("TextLabel")
@@ -244,19 +244,20 @@ hintLabel.TextColor3 = WHITE
 hintLabel.Text = "[Q] PULL   ·   [F] PUSH   ·   [E] STEAL / SIT / GACHA / FUSE   ·   [L] LOCK   ·   Click a brainrot to buy it"
 hintLabel.Parent = gui
 
--- Bottom buttons: lock, rebirth, report card, upgrades.
+-- Bottom buttons: lock, rebirth, fuse, report card, upgrades.
 local bottomBar = Instance.new("Frame")
 bottomBar.Name = "BottomBar"
 bottomBar.AnchorPoint = Vector2.new(0.5, 1)
 bottomBar.Position = UDim2.new(0.5, 0, 1, -12)
-bottomBar.Size = UDim2.fromOffset(580, 56)
+bottomBar.Size = UDim2.fromOffset(700, 56)
 bottomBar.BackgroundTransparency = 1
 bottomBar.Parent = gui
 
 local lockButton = makeButton(bottomBar, "LOCK [L]", Color3.fromRGB(70, 130, 240), UDim2.fromOffset(134, 48), UDim2.fromOffset(0, 4))
 local rebirthButton = makeButton(bottomBar, "REBIRTH", Color3.fromRGB(150, 90, 230), UDim2.fromOffset(134, 48), UDim2.fromOffset(142, 4))
-local indexButton = makeButton(bottomBar, "REPORT CARD", Color3.fromRGB(70, 180, 110), UDim2.fromOffset(150, 48), UDim2.fromOffset(284, 4))
-local upgradeButton = makeButton(bottomBar, "UPGRADES", Color3.fromRGB(230, 140, 40), UDim2.fromOffset(134, 48), UDim2.fromOffset(442, 4))
+local fuseBarButton = makeButton(bottomBar, "FUSE [K]", Color3.fromRGB(230, 80, 140), UDim2.fromOffset(110, 48), UDim2.fromOffset(284, 4))
+local indexButton = makeButton(bottomBar, "REPORT CARD", Color3.fromRGB(70, 180, 110), UDim2.fromOffset(150, 48), UDim2.fromOffset(402, 4))
+local upgradeButton = makeButton(bottomBar, "UPGRADES", Color3.fromRGB(230, 140, 40), UDim2.fromOffset(134, 48), UDim2.fromOffset(560, 4))
 
 -- The big centre banner for alerts and quest completions.
 local notifyFrame = Instance.new("Frame")
@@ -760,7 +761,7 @@ local function refreshQuests(snapshot)
 		stepLabel.Text = step.text .. "  (" .. progress .. "/" .. step.target .. ")  ·  +" .. formatMoney(step.reward)
 	else
 		chapterLabel.Text = "All chapters complete!"
-		stepLabel.Text = "You are a Bintang Sekolah. Keep collecting!"
+		stepLabel.Text = "You are a School Star. Keep collecting!"
 	end
 	for i, daily in ipairs(QuestCatalog.GetDailyQuests(snapshot.dailyDay)) do
 		local progress = snapshot.dailyProgress[daily.key] or 0
@@ -869,6 +870,13 @@ upgradeButton.MouseButton1Click:Connect(function()
 	gachaFrame.Visible = false
 	fuseFrame.Visible = false
 end)
+local function toggleFuse()
+	fuseFrame.Visible = not fuseFrame.Visible
+	reportFrame.Visible = false
+	upgradeFrame.Visible = false
+	gachaFrame.Visible = false
+end
+fuseBarButton.MouseButton1Click:Connect(toggleFuse)
 reportClose.MouseButton1Click:Connect(function()
 	reportFrame.Visible = false
 end)
@@ -908,6 +916,12 @@ end
 bindKey("BrainrotPull", Enum.KeyCode.Q, pullEvent)
 bindKey("BrainrotPush", Enum.KeyCode.F, pushEvent)
 bindKey("BrainrotLock", Enum.KeyCode.L, lockEvent)
+-- Fuse opens a local panel (no server call), so it binds directly.
+ContextActionService:BindAction("BrainrotFuse", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		toggleFuse()
+	end
+end, false, Enum.KeyCode.K)
 
 -- Your own steal prompts stay hidden: you cannot steal from yourself.
 ProximityPromptService.PromptShown:Connect(function(prompt)

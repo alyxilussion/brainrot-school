@@ -104,7 +104,18 @@ function BrainrotFactory.Build(entry, mutation, uid, showCost)
 		body.CFrame = CFrame.Angles(0, 0, math.rad(90))
 	end
 	body.Parent = model
-	model.PrimaryPart = body
+	-- The pivot: an invisible anchor at the body centre, carrying the
+	-- model's own orientation. It is the PrimaryPart, so PivotTo orients
+	-- the model by it. (The body itself cannot be the pivot: a Cylinder
+	-- body's part CFrame carries a 90-degree roll, and PivotTo would bake
+	-- that roll into every placement, laying cylinder brainrots on their
+	-- sides with their faces pointing sideways.)
+	local pivot = newPart("Pivot", Vector3.new(0.1, 0.1, 0.1), entry.body, Enum.Material.SmoothPlastic)
+	pivot.Transparency = 1
+	pivot.CanQuery = false
+	pivot.CastShadow = false
+	pivot.Parent = model
+	model.PrimaryPart = pivot
 
 	-- A bright topper on the head: the character's hat. Mutated brainrots get
 	-- a glowing topper in the mutation colour, so mutations read at a glance.

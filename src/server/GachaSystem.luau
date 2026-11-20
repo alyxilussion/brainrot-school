@@ -49,7 +49,7 @@ function GachaSystem.TryRoll(player)
 	-- A full base blocks the roll before any cash changes hands.
 	local pedestal = WorldBuilder.GetFreePedestal(base, state.placed)
 	if not pedestal then
-		notify(player, "Base penuh! Place or fuse some brainrots first.", "warn")
+		notify(player, "Base full! Place or fuse some brainrots first.", "warn")
 		return
 	end
 	if not PlayerState.TrySpend(state, Config.GACHA_COST) then

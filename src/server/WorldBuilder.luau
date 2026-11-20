@@ -186,7 +186,7 @@ local function buildBigTree()
 	for i = 1, 9 do
 		part("TreeLadder", Vector3.new(3, 0.4, 0.4), Vector3.new(-105, GROUND + 1 + i * 3, 30.6), Color3.fromRGB(120, 75, 40), Enum.Material.Wood, tree)
 	end
-	-- The crow's nest: Gagak Nakal lives here between thefts.
+	-- The crow's nest: the Naughty Crow lives here between thefts.
 	part("CrowNest", Vector3.new(4, 1.5, 4), Vector3.new(-112, GROUND + 38, 35), Color3.fromRGB(120, 85, 50), Enum.Material.Wood, tree, Enum.PartType.Cylinder).CFrame =
 		CFrame.new(-112, GROUND + 38, 35) * CFrame.Angles(0, 0, math.rad(90))
 end

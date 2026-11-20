@@ -1,6 +1,6 @@
 -- LockSystem: the base lock. Press LOCK and a blue shield covers your
 -- classroom for a minute: steal prompts read LOCKED and refuse to fire, and
--- Gagak Nakal skips you. Then the lock must recharge before you can raise it
+-- Naughty Crow skips you. Then the lock must recharge before you can raise it
 -- again, so timing it around the crow and the Lunch Rush matters.
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")

@@ -1,4 +1,4 @@
--- CrowThiefSystem: Gagak Nakal, the naughty crow who lives in the big tree.
+-- CrowThiefSystem: the Naughty Crow who lives in the big tree.
 -- Every couple of minutes he picks a random unlocked classroom that has
 -- brainrots, swoops down, snatches the richest one, and flies home to his
 -- nest. The owner gets an alert. A locked base is never a target — locking
@@ -29,7 +29,7 @@ end
 -- The crow, built from Parts: a black body, two flat wings, an orange beak.
 local function buildCrow()
 	local crow = Instance.new("Model")
-	crow.Name = "GagakNakal"
+	crow.Name = "NaughtyCrow"
 	local body = Instance.new("Part")
 	body.Name = "Body"
 	body.Shape = Enum.PartType.Ball
@@ -133,7 +133,7 @@ local function crowRaid()
 	end
 	local crowAlert = RemoteHub.Get("CrowAlert")
 	if crowAlert then
-		crowAlert:FireAllClients("Gagak Nakal is circling the school!")
+		crowAlert:FireAllClients("Naughty Crow is circling the school!")
 	end
 
 	local crow = buildCrow()
@@ -164,7 +164,7 @@ local function crowRaid()
 		stolen:PivotTo(crow:GetPivot() * CFrame.new(0, -2.5, 0))
 		stolen.Parent = crow
 	end
-	notify(victim, "Gagak Nakal stole your " .. target.name .. "! Lock your base next time!", "alert")
+	notify(victim, "Naughty Crow stole your " .. target.name .. "! Lock your base next time!", "alert")
 	flyTo(crow, world.treeTop, 4)
 	crow:Destroy()
 end

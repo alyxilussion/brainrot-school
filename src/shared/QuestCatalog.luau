@@ -7,7 +7,7 @@ local QuestCatalog = {}
 -- key: the event counter this step watches. target: how many. reward: cash.
 QuestCatalog.CHAPTERS = {
 	{
-		title = "Murid Baru",
+		title = "New Student",
 		steps = {
 			{ key = "bought", target = 1, text = "Buy your first brainrot", reward = 150 },
 			{ key = "placed", target = 1, text = "Place a brainrot in your classroom", reward = 200 },
@@ -15,7 +15,7 @@ QuestCatalog.CHAPTERS = {
 		},
 	},
 	{
-		title = "Naik Kelas",
+		title = "Next Grade",
 		steps = {
 			{ key = "stole", target = 1, text = "Steal a brainrot from a rival", reward = 800 },
 			{ key = "grappled", target = 1, text = "Pull or push a carrier", reward = 600 },
@@ -23,7 +23,7 @@ QuestCatalog.CHAPTERS = {
 		},
 	},
 	{
-		title = "Bintang Sekolah",
+		title = "School Star",
 		steps = {
 			{ key = "rebirthed", target = 1, text = "Rebirth once", reward = 3000 },
 			{ key = "ownedCount", target = 30, text = "Own 30 different brainrots", reward = 5000 },
