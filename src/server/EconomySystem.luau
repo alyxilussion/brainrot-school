@@ -135,10 +135,12 @@ function EconomySystem.RollGacha(state)
 end
 
 -- Fuse Lab: three placed brainrots of one tier become one of the next tier.
+-- Three PRINCIPAL fuse into a random Secret; Secret is the top of the
+-- ladder and cannot fuse further.
 function EconomySystem.Fuse(state, rarity)
 	local nextRarity = typeof(rarity) == "string" and Catalog.NextTier(rarity)
 	if not nextRarity then
-		G.notify(state, "Pick a tier below PRINCIPAL", Color3.fromRGB(255, 120, 120))
+		G.notify(state, "Pick a tier below Secret", Color3.fromRGB(255, 120, 120))
 		return
 	end
 	local picks = {}

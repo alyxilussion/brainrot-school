@@ -1,8 +1,9 @@
--- BrainrotCatalog: the 60 original brainrots of Brainrot School.
--- 15 tiers x 4, every name school- or forest-themed (Indonesian puns), every
--- character built from Parts by BrainrotFactory. Income is dollars per second
--- at 1x and roughly doubles every tier, $5/s up to $131K/s; the buy price is
--- twelve times the income. The client reads it for the Report Card grid.
+-- BrainrotCatalog: the 80 brainrots of Brainrot School.
+-- 15 tiers x 4 plus 20 Secret, every name school- or forest-themed
+-- (Indonesian puns), every character built from Parts by BrainrotFactory.
+-- Income is dollars per second at 1x and roughly doubles every tier, $5/s
+-- up to $786K/s; the buy price is twelve times the income. The client reads
+-- it for the Report Card grid.
 
 local Config = require(script.Parent.Config)
 
@@ -46,11 +47,11 @@ local ENTRIES = {
 	{ id = "spidol-singa", name = "Spidol Singa", rarity = "Divine", income = 384, cost = 4608, body = Color3.fromRGB(255, 170, 40), accent = Color3.fromRGB(90, 60, 200), shape = "Ball", blurb = "Roars in twelve colours at once." },
 	{ id = "bus-buaya", name = "Bus Buaya", rarity = "Divine", income = 448, cost = 5376, body = Color3.fromRGB(255, 215, 0), accent = Color3.fromRGB(60, 180, 90), shape = "Block", blurb = "Drives the school bus, eats the route." },
 	{ id = "kantin-kuda", name = "Kantin Kuda", rarity = "Divine", income = 512, cost = 6144, body = Color3.fromRGB(190, 140, 90), accent = Color3.fromRGB(255, 255, 255), shape = "Cylinder", blurb = "Gallops to lunch before the bell." },
-	-- Tier 8: Secret
-	{ id = "pustaka-paus", name = "Pustaka Paus", rarity = "Secret", income = 640, cost = 7680, body = Color3.fromRGB(80, 140, 220), accent = Color3.fromRGB(255, 255, 255), shape = "Ball", blurb = "Swallows whole shelves of stories." },
-	{ id = "kepala-harimau", name = "Kepala Harimau", rarity = "Secret", income = 768, cost = 9216, body = Color3.fromRGB(255, 140, 40), accent = Color3.fromRGB(60, 60, 60), shape = "Wedge", blurb = "Principal of the forest, stripes and all." },
-	{ id = "rapor-rajawali", name = "Rapor Rajawali", rarity = "Secret", income = 896, cost = 10752, body = Color3.fromRGB(200, 170, 120), accent = Color3.fromRGB(255, 215, 0), shape = "Wedge", blurb = "Delivers straight-A report cards from the sky." },
-	{ id = "ujian-unicorn", name = "Ujian Unicorn", rarity = "Secret", income = 1024, cost = 12288, body = Color3.fromRGB(255, 200, 230), accent = Color3.fromRGB(255, 215, 0), shape = "Ball", blurb = "Every exam is magically already passed." },
+	-- Tier 8: Hidden (renamed: "Secret" is now the top tier, tier 16)
+	{ id = "pustaka-paus", name = "Pustaka Paus", rarity = "Hidden", income = 640, cost = 7680, body = Color3.fromRGB(80, 140, 220), accent = Color3.fromRGB(255, 255, 255), shape = "Ball", blurb = "Swallows whole shelves of stories." },
+	{ id = "kepala-harimau", name = "Kepala Harimau", rarity = "Hidden", income = 768, cost = 9216, body = Color3.fromRGB(255, 140, 40), accent = Color3.fromRGB(60, 60, 60), shape = "Wedge", blurb = "Principal of the forest, stripes and all." },
+	{ id = "rapor-rajawali", name = "Rapor Rajawali", rarity = "Hidden", income = 896, cost = 10752, body = Color3.fromRGB(200, 170, 120), accent = Color3.fromRGB(255, 215, 0), shape = "Wedge", blurb = "Delivers straight-A report cards from the sky." },
+	{ id = "ujian-unicorn", name = "Ujian Unicorn", rarity = "Hidden", income = 1024, cost = 12288, body = Color3.fromRGB(255, 200, 230), accent = Color3.fromRGB(255, 215, 0), shape = "Ball", blurb = "Every exam is magically already passed." },
 	-- Tier 9: Celestial
 	{ id = "wisuda-walrus", name = "Wisuda Walrus", rarity = "Celestial", income = 1280, cost = 15360, body = Color3.fromRGB(160, 130, 110), accent = Color3.fromRGB(40, 90, 180), shape = "Cylinder", blurb = "Graduated with honours in naps." },
 	{ id = "beasiswa-badak", name = "Beasiswa Badak", rarity = "Celestial", income = 1536, cost = 18432, body = Color3.fromRGB(150, 160, 180), accent = Color3.fromRGB(120, 230, 210), shape = "Block", blurb = "Charges through tuition fees." },
@@ -86,6 +87,30 @@ local ENTRIES = {
 	{ id = "principal-primordial", name = "Principal Primordial", rarity = "PRINCIPAL", income = 98304, cost = 1179648, body = Color3.fromRGB(230, 190, 90), accent = Color3.fromRGB(255, 255, 255), shape = "Wedge", blurb = "The first principal. Still on duty." },
 	{ id = "pendiri-akademi", name = "Pendiri Akademi", rarity = "PRINCIPAL", income = 114688, cost = 1376256, body = Color3.fromRGB(60, 160, 100), accent = Color3.fromRGB(255, 215, 0), shape = "Block", blurb = "Planted the first tree of the school." },
 	{ id = "roh-principal-abadi", name = "Roh Principal Abadi", rarity = "PRINCIPAL", income = 131072, cost = 1572864, body = Color3.fromRGB(220, 235, 255), accent = Color3.fromRGB(255, 215, 0), shape = "Ball", blurb = "The eternal spirit of the academy." },
+	-- Tier 16: Secret — the top of the ladder. Twenty entries, each one a
+	-- school secret with a name of its own. The tier base doubles from
+	-- PRINCIPAL ($81,920/s) to $163,840/s, and entries climb in steps of
+	-- $32,768/s, the same 20%-of-base step every other tier uses.
+	{ id = "loker-laba-laba", name = "Loker Laba-Laba", rarity = "Secret", income = 163840, cost = 1966080, body = Color3.fromRGB(90, 90, 110), accent = Color3.fromRGB(200, 200, 220), shape = "Ball", blurb = "Every locker hides a web of secrets." },
+	{ id = "brankas-bunglon", name = "Brankas Bunglon", rarity = "Secret", income = 196608, cost = 2359296, body = Color3.fromRGB(60, 180, 120), accent = Color3.fromRGB(255, 215, 0), shape = "Block", blurb = "The vault that changes colour with the code." },
+	{ id = "kode-kodok", name = "Kode Kodok", rarity = "Secret", income = 229376, cost = 2752512, body = Color3.fromRGB(120, 200, 90), accent = Color3.fromRGB(255, 255, 255), shape = "Ball", blurb = "Croaks the password once, then forgets it." },
+	{ id = "sandi-siput", name = "Sandi Siput", rarity = "Secret", income = 262144, cost = 3145728, body = Color3.fromRGB(220, 170, 130), accent = Color3.fromRGB(150, 110, 70), shape = "Cylinder", blurb = "Carries the cipher slowly, never drops it." },
+	{ id = "dokumen-capung", name = "Dokumen Capung", rarity = "Secret", income = 294912, cost = 3538944, body = Color3.fromRGB(120, 200, 255), accent = Color3.fromRGB(255, 255, 255), shape = "Wedge", blurb = "Files fly faster than the eye can read." },
+	{ id = "ijazah-iguana", name = "Ijazah Iguana", rarity = "Secret", income = 327680, cost = 3932160, body = Color3.fromRGB(90, 160, 90), accent = Color3.fromRGB(255, 215, 0), shape = "Block", blurb = "Graduated in secret, diploma and all." },
+	{ id = "transkrip-tokek", name = "Transkrip Tokek", rarity = "Secret", income = 360448, cost = 4325376, body = Color3.fromRGB(140, 140, 160), accent = Color3.fromRGB(255, 120, 120), shape = "Ball", blurb = "Every grade, gecko-sealed and classified." },
+	{ id = "absen-anoa", name = "Absen Anoa", rarity = "Secret", income = 393216, cost = 4718592, body = Color3.fromRGB(150, 120, 90), accent = Color3.fromRGB(240, 240, 240), shape = "Cylinder", blurb = "Present in every class, recorded in none." },
+	{ id = "piket-pipit", name = "Piket Pipit", rarity = "Secret", income = 425984, cost = 5111808, body = Color3.fromRGB(255, 200, 90), accent = Color3.fromRGB(120, 90, 60), shape = "Wedge", blurb = "On duty at dawn, gone before the bell." },
+	{ id = "kurikulum-kupu", name = "Kurikulum Kupu", rarity = "Secret", income = 458752, cost = 5505024, body = Color3.fromRGB(255, 150, 220), accent = Color3.fromRGB(255, 215, 0), shape = "Ball", blurb = "The syllabus, rewritten by butterflies." },
+	{ id = "mikroskop-marmot", name = "Mikroskop Marmot", rarity = "Secret", income = 491520, cost = 5898240, body = Color3.fromRGB(180, 150, 110), accent = Color3.fromRGB(120, 220, 255), shape = "Block", blurb = "Sees secrets too small for the principal." },
+	{ id = "teleskop-tapir", name = "Teleskop Tapir", rarity = "Secret", income = 524288, cost = 6291456, body = Color3.fromRGB(100, 100, 130), accent = Color3.fromRGB(200, 200, 255), shape = "Cylinder", blurb = "Watches the stars during night class." },
+	{ id = "kalkulator-kelelawar", name = "Kalkulator Kelelawar", rarity = "Secret", income = 557056, cost = 6684672, body = Color3.fromRGB(70, 70, 90), accent = Color3.fromRGB(255, 215, 0), shape = "Wedge", blurb = "Adds up the night shift in the dark." },
+	{ id = "kompas-kepiting", name = "Kompas Kepiting", rarity = "Secret", income = 589824, cost = 7077888, body = Color3.fromRGB(255, 120, 90), accent = Color3.fromRGB(255, 255, 255), shape = "Ball", blurb = "Always points to the hidden classroom." },
+	{ id = "origami-gurita", name = "Origami Gurita", rarity = "Secret", income = 622592, cost = 7471104, body = Color3.fromRGB(200, 120, 220), accent = Color3.fromRGB(255, 255, 255), shape = "Block", blurb = "Folds eight secrets at once." },
+	{ id = "kaligrafi-kakatua", name = "Kaligrafi Kakatua", rarity = "Secret", income = 655360, cost = 7864320, body = Color3.fromRGB(255, 255, 255), accent = Color3.fromRGB(255, 180, 60), shape = "Ball", blurb = "Writes in beautiful, unreadable script." },
+	{ id = "olimpiade-owa", name = "Olimpiade Owa", rarity = "Secret", income = 688128, cost = 8257536, body = Color3.fromRGB(200, 170, 140), accent = Color3.fromRGB(255, 215, 0), shape = "Cylinder", blurb = "Wins gold in every secret subject." },
+	{ id = "catur-cacing", name = "Catur Cacing", rarity = "Secret", income = 720896, cost = 8650752, body = Color3.fromRGB(220, 180, 160), accent = Color3.fromRGB(60, 60, 60), shape = "Wedge", blurb = "Checkmates from underneath the board." },
+	{ id = "rahasia-rayap", name = "Rahasia Rayap", rarity = "Secret", income = 753664, cost = 9043968, body = Color3.fromRGB(190, 160, 110), accent = Color3.fromRGB(120, 90, 50), shape = "Ball", blurb = "Eats the evidence, keeps the secret." },
+	{ id = "misteri-manta", name = "Misteri Manta", rarity = "Secret", income = 786432, cost = 9437184, body = Color3.fromRGB(80, 110, 180), accent = Color3.fromRGB(200, 230, 255), shape = "Wedge", blurb = "Glides through the school's deepest secret." },
 }
 
 Catalog.Entries = ENTRIES
@@ -101,8 +126,8 @@ end
 Catalog.ById = byId
 Catalog.ByRarity = byRarity
 
--- The tier above this one, or nil at the top of the ladder (PRINCIPAL).
-function Catalog.NextTier(rarity) -- Fuse Lab: next of 15 tiers
+-- The tier above this one, or nil at the top of the ladder (Secret).
+function Catalog.NextTier(rarity) -- Fuse Lab: next of 16 tiers
 	local rank = Config.RARITY_RANK[rarity]
 	return rank and Config.RARITY_ORDER[rank + 1] or nil
 end
@@ -141,7 +166,7 @@ function Catalog.ApplyLuck(weights, luckLevels)
 		local weight = weights[rarity] or 0
 		if rarity == "Common" then
 			weight *= math.max(0.2, 1 - 0.25 * luckLevels)
-		elseif rarity ~= "PRINCIPAL" then
+		elseif rarity ~= "Secret" then
 			weight *= 1 + 0.3 * luckLevels
 		end
 		tilted[rarity] = weight

@@ -18,10 +18,12 @@ Config.REMOTES = {
 
 Config.START_CASH = 100
 
--- The 15-tier ladder, weakest first. Income and cost live in BrainrotCatalog.
+-- The 16-tier ladder, weakest first. Income and cost live in BrainrotCatalog.
+-- Tier 8 used to be called Secret; it is Hidden now, and Secret is the new
+-- top tier (tier 16) with twenty entries.
 Config.RARITY_ORDER = {
-	"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret",
-	"Celestial", "Galactic", "Eternal", "Godly", "Supreme", "Ultimate", "PRINCIPAL",
+	"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Hidden",
+	"Celestial", "Galactic", "Eternal", "Godly", "Supreme", "Ultimate", "PRINCIPAL", "Secret",
 }
 
 Config.RARITY_RANK = {}
@@ -38,7 +40,7 @@ Config.RARITY_COLORS = {
 	Legendary = Color3.fromRGB(255, 190, 40),
 	Mythic = Color3.fromRGB(255, 80, 70),
 	Divine = Color3.fromRGB(70, 240, 220),
-	Secret = Color3.fromRGB(230, 230, 245),
+	Hidden = Color3.fromRGB(230, 230, 245),
 	Celestial = Color3.fromRGB(160, 230, 255),
 	Galactic = Color3.fromRGB(150, 110, 255),
 	Eternal = Color3.fromRGB(60, 225, 150),
@@ -46,25 +48,26 @@ Config.RARITY_COLORS = {
 	Supreme = Color3.fromRGB(255, 80, 160),
 	Ultimate = Color3.fromRGB(255, 135, 60),
 	PRINCIPAL = Color3.fromRGB(255, 255, 255),
+	Secret = Color3.fromRGB(255, 85, 255),
 }
 
 -- Parade spawn weights. The Lucky Charm tilts these toward the rare end.
 Config.RARITY_WEIGHTS = {
 	Common = 45, Uncommon = 25, Rare = 13, Epic = 7, Legendary = 4, Mythic = 2.2,
-	Divine = 1.3, Secret = 0.8, Celestial = 0.55, Galactic = 0.35, Eternal = 0.22,
-	Godly = 0.14, Supreme = 0.09, Ultimate = 0.05, PRINCIPAL = 0.02,
+	Divine = 1.3, Hidden = 0.8, Celestial = 0.55, Galactic = 0.35, Eternal = 0.22,
+	Godly = 0.14, Supreme = 0.09, Ultimate = 0.05, PRINCIPAL = 0.02, Secret = 0.005,
 }
 
 -- Gacha weights: kinder than the parade, so a $1,000 roll feels worth it.
 Config.GACHA_WEIGHTS = {
 	Common = 30, Uncommon = 24, Rare = 16, Epic = 10, Legendary = 7, Mythic = 4.5,
-	Divine = 3, Secret = 2, Celestial = 1.4, Galactic = 0.9, Eternal = 0.6,
-	Godly = 0.35, Supreme = 0.15, Ultimate = 0.08, PRINCIPAL = 0.02,
+	Divine = 3, Hidden = 2, Celestial = 1.4, Galactic = 0.9, Eternal = 0.6,
+	Godly = 0.35, Supreme = 0.15, Ultimate = 0.08, PRINCIPAL = 0.02, Secret = 0.01,
 }
 
 -- High pads and the Arena Drop: only Mythic and better appear there.
 Config.HIGH_PAD_WEIGHTS = {
-	Mythic = 34, Divine = 22, Secret = 15, Celestial = 11, Galactic = 8,
+	Mythic = 34, Divine = 22, Hidden = 15, Celestial = 11, Galactic = 8,
 	Eternal = 5, Godly = 3, Supreme = 1.5, Ultimate = 0.5,
 }
 

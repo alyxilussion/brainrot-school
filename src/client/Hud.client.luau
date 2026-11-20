@@ -1,10 +1,10 @@
--- Hud: the student's screen. Centered cash and $/s, a full-width event
--- banner, the quest card on the right, the classroom card on the left, the
--- bottom action bar (PULL Q, PUSH F, LOCK L, SHOP U, REBIRTH R, QUESTS J,
--- INDEX B) with cooldowns, the CARRYING -> RETURN TO BASE bar, toasts, the
--- target highlight for PULL/PUSH, and the Shop, Quest, Rebirth, Gacha, Fuse
--- and Report Card panels. Scales with the screen; nothing sits under the
--- Roblox menu buttons.
+-- Hud: the student's screen. Centered cash and $/s with the spec strip
+-- under it, a full-width event banner, the quest card on the right, the
+-- classroom card on the left, the bottom action bar (PULL Q, PUSH F, LOCK L,
+-- SHOP U, REBIRTH R, QUESTS J, INDEX B) with cooldowns, the CARRYING ->
+-- RETURN TO BASE bar, toasts, the target highlight for PULL/PUSH, and the
+-- Shop, Quest, Rebirth, Gacha, Fuse and Report Card panels. Scales with the
+-- screen; nothing sits under the Roblox menu buttons.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -137,6 +137,15 @@ stroke(cashCard, GOLD, 3)
 new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(70, 50, 120), Color3.fromRGB(30, 26, 52)), Rotation = 90 }, cashCard)
 local cashLabel = label(cashCard, "Cash", "$0", UDim2.new(1, -20, 0, 50), UDim2.fromOffset(10, 4), GOLD)
 local incomeLabel = label(cashCard, "Income", "+$0/s", UDim2.new(1, -20, 0, 26), UDim2.fromOffset(10, 54), GREEN)
+
+---------------------------------------------------------------------------
+-- Spec strip: one thin line under the cash bar, naming the whole game.
+---------------------------------------------------------------------------
+local specStrip = card(gui, "SpecStrip", UDim2.fromOffset(700, 22), UDim2.new(0.5, 0, 0, 92), Vector2.new(0.5, 0))
+specStrip.BackgroundTransparency = 0.35
+specStrip.ZIndex = 5
+local specText = label(specStrip, "Spec", "80 BRAINROTS  ·  16 TIERS  ·  5 MUTATIONS  ·  PULL  ·  PUSH  ·  STEAL  ·  LOCK  ·  REBIRTH  ·  GACHA  ·  FUSE", UDim2.new(1, -16, 1, -4), UDim2.fromOffset(8, 2), WHITE, Enum.Font.GothamBold)
+specText.ZIndex = 5
 
 ---------------------------------------------------------------------------
 -- Event banner: full width, under the cash panel.

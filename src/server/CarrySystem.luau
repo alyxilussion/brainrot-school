@@ -20,6 +20,18 @@ local function now()
 	return Workspace:GetServerTimeNow()
 end
 
+-- How far a model's lowest point sits below its pivot, measured from the
+-- bounding box. The factory builds the pivot at the feet, so this is 0 for
+-- a model standing on its own feet — but any placement that puts the pivot
+-- on a surface (parade lane, dropped on the grass) adds this lift so the
+-- model's base touches the surface exactly instead of sinking into it.
+-- Measured from the model as built, so scale is already included.
+function CarrySystem.PivotToBaseLift(model)
+	local boxCFrame, boxSize = model:GetBoundingBox()
+	local boxBottom = boxCFrame.Position.Y - boxSize.Y / 2
+	return model:GetPivot().Position.Y - boxBottom
+end
+
 -- A new record plus its model. status: parade | pad | carried | dropped | placed.
 function CarrySystem.NewRecord(entry, mutation, cframe, status, opts)
 	uidCounter += 1
@@ -181,7 +193,8 @@ function CarrySystem.Drop(record, position, lastCarrier)
 	params.FilterDescendantsInstances = { G.World.GetWorld().root }
 	local hit = Workspace:Raycast(Vector3.new(x, position.Y + 2, z), Vector3.new(0, -120, 0), params)
 	local y = hit and hit.Position.Y or G.World.GroundHeightAt(x, z)
-	record.model:PivotTo(CFrame.new(x, y, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+	local lift = CarrySystem.PivotToBaseLift(record.model)
+	record.model:PivotTo(CFrame.new(x, y + lift, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
 	record.status = "dropped"
 	record.droppedAt = now()
 	record.lastCarrier = lastCarrier

@@ -485,9 +485,9 @@ local function paintCrest(gui)
 		ray.Rotation = i * 15
 	end
 	circle(gui, "InnerDisc", 0.62, 0.5, 0.5, Color3.fromRGB(60, 40, 120))
-	-- A ring of the 15 rarity gems.
+	-- A ring of one gem per rarity tier, evenly spaced.
 	for i, rarity in ipairs(Config.RARITY_ORDER) do
-		local a = math.rad((i - 1) * 24)
+		local a = math.rad((i - 1) * (360 / #Config.RARITY_ORDER))
 		local gem = circle(gui, "Gem" .. rarity, 0.055, 0.5 + math.sin(a) * 0.4, 0.5 - math.cos(a) * 0.4, Config.RARITY_COLORS[rarity])
 		local glow = Instance.new("UIStroke")
 		glow.Color = WHITE
@@ -606,7 +606,7 @@ local function buildArena(root)
 		{ "pensil-penguin", "COMMON · $5/s" },
 		{ "lunchbox-lion", "RARE · $28/s" },
 		{ "pencil-shark", "LEGENDARY · $80/s" },
-		{ "ujian-unicorn", "SECRET · $1K/s" },
+		{ "ujian-unicorn", "HIDDEN · $1K/s" },
 	}
 	for i, pick in ipairs(artPicks) do
 		local a = math.rad((i - 1) * 90 + 45)

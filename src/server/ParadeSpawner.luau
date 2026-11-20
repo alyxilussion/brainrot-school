@@ -38,6 +38,11 @@ local function spawnWalker()
 	local mutation = Catalog.RollMutation(rng, luck)
 	local facing = CFrame.lookAt(world.paradeStart, world.paradeEnd)
 	local record = G.Carry.NewRecord(entry, mutation, facing, "parade", { scale = 1.15, status = "BUY " .. Config.FormatMoney(entry.cost) })
+	-- Lift the model so its base rests exactly on the lane: without this
+	-- the pivot sits on the surface and the lower half of the brainrot
+	-- sinks into the ground.
+	record.lift = G.Carry.PivotToBaseLift(record.model)
+	record.model:PivotTo(facing + Vector3.new(0, record.lift, 0))
 	record.walkStart = Workspace:GetServerTimeNow()
 	record.walkOffset = rng:NextNumber(-2.5, 2.5)
 	local prompt = G.Factory.AttachBuyPrompt(record.model, entry)
@@ -90,7 +95,7 @@ local function stepWalkers()
 				walkers[record] = nil
 				G.Carry.Destroy(record)
 			else
-				local position = world.paradeStart:Lerp(world.paradeEnd, alpha) + Vector3.new(0, 0, record.walkOffset)
+				local position = world.paradeStart:Lerp(world.paradeEnd, alpha) + Vector3.new(0, record.lift or 0, record.walkOffset)
 				local waddle = math.sin(t * 9 + record.walkOffset) * 0.12
 				record.model:PivotTo(CFrame.lookAt(position, position + (world.paradeEnd - world.paradeStart)) * CFrame.Angles(0, 0, waddle))
 			end
