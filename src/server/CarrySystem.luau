@@ -35,6 +35,13 @@ local function notify(player, text, kind)
 	end
 end
 
+-- A buy or grab without a character would take the cash and strand the
+-- brainrot, so every entry point checks this before anything changes.
+local function hasCharacter(player)
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart") ~= nil
+end
+
 -- Welds every part of the model together, then welds the body to the
 -- character's root so the brainrot rides along. Massless so it never drags.
 local function weldToCharacter(model, character, slotIndex)
@@ -109,6 +116,9 @@ function CarrySystem.TryBuyParade(player, uid)
 	if not state then
 		return
 	end
+	if not hasCharacter(player) then
+		return
+	end
 	if #state.carried >= PlayerState.GetCarryCapacity(state) then
 		notify(player, "Your hands are full! Place a brainrot first.", "warn")
 		return
@@ -136,6 +146,9 @@ function CarrySystem.TryGrabHighPad(player, uid)
 	if not state then
 		return
 	end
+	if not hasCharacter(player) then
+		return
+	end
 	if #state.carried >= PlayerState.GetCarryCapacity(state) then
 		notify(player, "Your hands are full! Place a brainrot first.", "warn")
 		return
@@ -156,6 +169,9 @@ function CarrySystem.TryGrabDropped(player, uid)
 	end
 	local state = PlayerState.Get(player)
 	if not state then
+		return
+	end
+	if not hasCharacter(player) then
 		return
 	end
 	if #state.carried >= PlayerState.GetCarryCapacity(state) then
@@ -192,9 +208,13 @@ function CarrySystem.DropCarried(player, record, atPosition)
 			CarrySystem.TryGrabDropped(grabber, record.uid)
 		end)
 	end
-	-- A dropped brainrot wanders off after a while.
+	-- A dropped brainrot wanders off after a while. The generation stamp
+	-- ties the timer to this drop: if the brainrot is grabbed and dropped
+	-- again, the old timer must not destroy the fresh drop.
+	record.dropGeneration = (record.dropGeneration or 0) + 1
+	local generation = record.dropGeneration
 	task.delay(Config.DROPPED_LIFETIME, function()
-		if dropped[record.uid] then
+		if dropped[record.uid] and record.dropGeneration == generation then
 			dropped[record.uid] = nil
 			record.model:Destroy()
 		end

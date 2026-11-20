@@ -141,8 +141,17 @@ local function crowRaid()
 	crow.Parent = workspace
 	local perch = base.center + Vector3.new(0, 12, 0)
 	flyTo(crow, perch, 4)
-	-- Snatch: the brainrot leaves the pedestal and rides under the crow.
+	-- The flight takes four seconds: the brainrot may have been stolen
+	-- or rebirthed away meanwhile, so snatch only if it is still on
+	-- the victim's pedestal.
 	local pedestalId = target.pedestalId
+	local freshState = PlayerState.Get(victim)
+	local stillPlaced = freshState and freshState.placed[pedestalId]
+	if not stillPlaced or stillPlaced.uid ~= target.uid then
+		crow:Destroy()
+		return
+	end
+	-- Snatch: the brainrot leaves the pedestal and rides under the crow.
 	CarrySystem.RemovePlaced(victim, pedestalId, false)
 	StealSystem.RemovePrompt(target.uid)
 	local stolen = target.model

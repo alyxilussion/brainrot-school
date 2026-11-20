@@ -36,7 +36,7 @@ local function newState(player, baseIndex)
 		questProgress = {}, -- [questKey] = count so far
 		dailyProgress = {}, -- [dailyKey] = count so far
 		dailyDone = {}, -- [dailyKey] = true once its reward is paid
-		dailyDay = 0, -- day-of-year the daily quests belong to
+		dailyDay = tonumber(os.date("%j")), -- day-of-year the daily quests belong to
 	}
 end
 

@@ -82,6 +82,16 @@ local function onPlayerAdded(player)
 	player.CharacterAdded:Connect(function(character)
 		local humanoid = character:WaitForChild("Humanoid")
 		humanoid.WalkSpeed = UpgradeSystem.GetWalkSpeed(state)
+		-- CharacterAutoLoads is off, so the server must respawn the
+		-- student after every death; without this a death strands the
+		-- player with no character at all. Carried brainrots drop first.
+		humanoid.Died:Connect(function()
+			CarrySystem.DropAllCarried(player)
+			task.wait(2)
+			if PlayerState.Get(player) then
+				player:LoadCharacter()
+			end
+		end)
 	end)
 	-- CharacterAutoLoads is off in the project, so the server loads the
 	-- character once the student's record and classroom exist.

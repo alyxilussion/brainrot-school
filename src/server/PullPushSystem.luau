@@ -93,6 +93,9 @@ function PullPushSystem.TryPull(player)
 		return
 	end
 	local targetState = PlayerState.Get(target)
+	if not targetState then
+		return
+	end
 	if PlayerState.IsShielded(targetState) then
 		notify(player, target.Name .. " is shielded!", "warn")
 		return
@@ -100,6 +103,9 @@ function PullPushSystem.TryPull(player)
 	-- Yank the carrier toward the puller and slow their run.
 	local myRoot = rootOf(player)
 	local targetRoot = rootOf(target)
+	if not myRoot or not targetRoot then
+		return
+	end
 	local direction = (myRoot.Position - targetRoot.Position)
 	direction = Vector3.new(direction.X, 0, direction.Z)
 	if direction.Magnitude > 0.1 then
@@ -146,6 +152,9 @@ function PullPushSystem.TryPush(player)
 		return
 	end
 	local targetState = PlayerState.Get(target)
+	if not targetState then
+		return
+	end
 	if PlayerState.IsShielded(targetState) then
 		notify(player, target.Name .. " is shielded!", "warn")
 		return
@@ -153,6 +162,9 @@ function PullPushSystem.TryPush(player)
 	-- Shove the carrier away from the pusher.
 	local myRoot = rootOf(player)
 	local targetRoot = rootOf(target)
+	if not myRoot or not targetRoot then
+		return
+	end
 	local direction = (targetRoot.Position - myRoot.Position)
 	direction = Vector3.new(direction.X, 0, direction.Z)
 	if direction.Magnitude < 0.1 then

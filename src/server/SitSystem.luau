@@ -63,6 +63,13 @@ function SitSystem.ToggleSit(player, seat)
 			connection:Disconnect()
 		end
 	end)
+	-- Dying while seated clears the seat too: without this, the first
+	-- sit press after respawning would run the stand-up branch instead.
+	humanoid.Died:Connect(function()
+		if sitting[player] == seat then
+			sitting[player] = nil
+		end
+	end)
 end
 
 function SitSystem.Start()

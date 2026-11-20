@@ -96,6 +96,12 @@ function StealSystem.TrySteal(player, uid)
 	if not ownerState.placed[record.pedestalId] or ownerState.placed[record.pedestalId].uid ~= uid then
 		return
 	end
+	-- The thief needs a character to carry it: without one the brainrot
+	-- would leave its pedestal and belong to nobody.
+	local thiefCharacter = player.Character
+	if not thiefCharacter or not thiefCharacter:FindFirstChild("HumanoidRootPart") then
+		return
+	end
 	-- Take it off the pedestal, keep the model, and put it in the thief's hands.
 	CarrySystem.RemovePlaced(owner, record.pedestalId, false)
 	StealSystem.RemovePrompt(uid)
