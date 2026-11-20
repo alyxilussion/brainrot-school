@@ -40,7 +40,10 @@ function StealSystem.CreatePrompt(model, owner, record)
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 10
 	prompt.RequiresLineOfSight = false
-	prompt.Parent = body
+	-- Hang the prompt from the feet, not the body centre: the bubble
+	-- renders at ground level, far below the floating plate.
+	local anchor = model:FindFirstChild("PromptAnchor")
+	prompt.Parent = anchor or body
 	-- The client reads this to hide your own prompts from you: you cannot
 	-- steal from yourself, so your own brainrots stay uncluttered.
 	prompt:SetAttribute("OwnerUserId", owner.UserId)

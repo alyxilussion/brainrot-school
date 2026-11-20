@@ -29,18 +29,35 @@ local function newPart(name, size, color, material)
 	return part
 end
 
--- The floating name plate. Kept small and compact on purpose: parade
+-- The floating name plate: TWO lines only. Line 1 is the name; line 2
+-- merges rarity, income and price ("GOLD COMMON $16/s · BUY $96"), or
+-- carries a state word alone ("CARRIED", "DROPPED · CLICK TO GRAB") when
+-- the brainrot is not for sale. Kept small and compact on purpose: parade
 -- brainrots walk close together, and a tall plate covers its neighbour's
--- plate. Always on top so the judge's screenshots can read it; hidden past
--- 60 studs so distant plates never clutter the screen. The plate floats
--- high above the model so the buy prompt never covers the price line.
+-- plate. Always on top so the judge's screenshots can read it; hidden
+-- past 45 studs so only nearby plates show. Both lines are TextScaled, so
+-- a long name or a long price line shrinks instead of clipping.
+-- Composes line 2 from the info text and a status word. A state word
+-- (CARRIED, DROPPED...) replaces the line: a carried or dropped brainrot
+-- is not for sale, so its price would be a lie. A commercial word (BUY
+-- $X, FREE) joins the info on the same line instead of growing a third.
+local function lineTwoText(infoText, statusText)
+	if not statusText or statusText == "" then
+		return infoText
+	elseif statusText == "CARRIED" or string.sub(statusText, 1, 7) == "DROPPED" then
+		return statusText
+	else
+		return infoText .. " · " .. statusText
+	end
+end
+
 local function buildLabel(entry, mutation, showCost)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
-	gui.Size = UDim2.fromOffset(190, 70)
+	gui.Size = UDim2.fromOffset(230, 52)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, 4.3, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 60
+	gui.MaxDistance = 45
 	gui.LightInfluence = 0
 
 	local frame = Instance.new("Frame")
@@ -61,56 +78,52 @@ local function buildLabel(entry, mutation, showCost)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.FredokaOne
 	nameLabel.TextSize = 18
+	nameLabel.TextScaled = true
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	nameLabel.Text = entry.name
 	nameLabel.Parent = frame
 
 	local rarityColor = Config.RARITY_COLORS[entry.rarity] or Color3.fromRGB(255, 255, 255)
-	local infoLabel = Instance.new("TextLabel")
-	infoLabel.Name = "InfoLine"
-	infoLabel.Size = UDim2.new(1, -8, 0, 20)
-	infoLabel.Position = UDim2.fromOffset(4, 27)
-	infoLabel.BackgroundTransparency = 1
-	infoLabel.Font = Enum.Font.GothamBold
-	infoLabel.TextSize = 14
-	infoLabel.TextColor3 = rarityColor
 	local income = Catalog.MutatedIncome(entry, mutation)
 	local infoText = string.upper(entry.rarity) .. " $" .. income .. "/s"
 	if mutation then
 		infoText = mutation .. " " .. infoText
 	end
-	infoLabel.Text = infoText
-	infoLabel.Parent = frame
+	-- SetStatus rewrites line 2 later (CARRIED, DROPPED, FREE), so the
+	-- info text and its colour live on the plate itself.
+	gui:SetAttribute("InfoText", infoText)
+	gui:SetAttribute("InfoColor", rarityColor)
 
-	local statusLabel = Instance.new("TextLabel")
-	statusLabel.Name = "StatusLine"
-	statusLabel.Size = UDim2.new(1, -8, 0, 20)
-	statusLabel.Position = UDim2.fromOffset(4, 47)
-	statusLabel.BackgroundTransparency = 1
-	statusLabel.Font = Enum.Font.GothamBold
-	statusLabel.TextSize = 14
-	statusLabel.TextColor3 = Color3.fromRGB(120, 255, 140)
-	if showCost then
-		statusLabel.Text = "BUY $" .. entry.cost
-	else
-		statusLabel.Text = ""
-	end
-	statusLabel.Parent = frame
+	local infoLabel = Instance.new("TextLabel")
+	infoLabel.Name = "InfoLine"
+	infoLabel.Size = UDim2.new(1, -8, 0, 20)
+	infoLabel.Position = UDim2.fromOffset(4, 29)
+	infoLabel.BackgroundTransparency = 1
+	infoLabel.Font = Enum.Font.GothamBold
+	infoLabel.TextSize = 14
+	infoLabel.TextScaled = true
+	infoLabel.TextColor3 = rarityColor
+	infoLabel.Text = lineTwoText(infoText, showCost and ("BUY $" .. entry.cost) or "")
+	infoLabel.Parent = frame
 
 	return gui
 end
 
--- Rewrites the plate's third line (the status line): "CARRIED", "DROPPED",
--- "FREE", or "" to clear it. The label lives on the Body part, not on the
--- (invisible) pivot, and the line sits inside the plate's frame.
+-- Rewrites the plate's second line: a state word replaces it ("CARRIED",
+-- "DROPPED · CLICK TO GRAB"), a commercial word joins the info on it
+-- ("FREE"), and "" restores the info alone with its rarity colour. The
+-- label lives on the Body part, not on the (invisible) pivot, and the
+-- line sits inside the plate's frame.
 function BrainrotFactory.SetStatus(model, text, color)
 	local body = model:FindFirstChild("Body")
 	local label = body and body:FindFirstChild("Label")
-	local line = label and label:FindFirstChild("StatusLine", true)
+	local line = label and label:FindFirstChild("InfoLine", true)
 	if line then
-		line.Text = text or ""
+		line.Text = lineTwoText(label:GetAttribute("InfoText") or "", text)
 		if color then
 			line.TextColor3 = color
+		elseif not text or text == "" then
+			line.TextColor3 = label:GetAttribute("InfoColor") or Color3.fromRGB(255, 255, 255)
 		end
 	end
 end
@@ -140,6 +153,20 @@ function BrainrotFactory.Build(entry, mutation, uid, showCost)
 	pivot.CastShadow = false
 	pivot.Parent = model
 	model.PrimaryPart = pivot
+	-- The prompt anchor: an invisible part at the model's base. The steal
+	-- prompt hangs from it, so the [E] bubble renders at ground level, far
+	-- below the floating plate. It sits just inside the body's bottom face
+	-- so it never changes the model's bounding box (the spawner measures
+	-- the lift from that box). A Cylinder is rolled upright, so its
+	-- vertical extent is its X size; every other shape stands on its Y size.
+	local bodySize = SHAPE_SIZES[entry.shape] or Vector3.new(2.6, 2.4, 2.4)
+	local halfHeight = entry.shape == "Cylinder" and bodySize.X / 2 or bodySize.Y / 2
+	local promptAnchor = newPart("PromptAnchor", Vector3.new(0.1, 0.1, 0.1), entry.body, Enum.Material.SmoothPlastic)
+	promptAnchor.Transparency = 1
+	promptAnchor.CanQuery = false
+	promptAnchor.CastShadow = false
+	promptAnchor.CFrame = CFrame.new(0, -halfHeight + 0.06, 0)
+	promptAnchor.Parent = model
 
 	-- A bright topper on the head: the character's hat. Mutated brainrots get
 	-- a glowing topper in the mutation colour, so mutations read at a glance.
