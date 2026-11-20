@@ -24,11 +24,11 @@ local BODY = {
 
 -- Which school prop a brainrot holds, from a word in its name.
 local PROP_WORDS = {
-	{ "Pensil", "pencil" }, { "Pencil", "pencil" }, { "Spidol", "pencil" }, { "Kapur", "pencil" },
-	{ "Buku", "book" }, { "Pustaka", "book" }, { "Perpustakaan", "book" }, { "Rapor", "book" },
-	{ "Arsip", "book" }, { "Ujian", "book" }, { "Tas", "bag" }, { "Backpack", "bag" },
-	{ "Lunchbox", "bag" }, { "Mistar", "ruler" }, { "Penggaris", "ruler" }, { "Globe", "globe" },
-	{ "Astronomi", "globe" }, { "Lonceng", "bell" }, { "Jam", "bell" },
+	{ "Pencil", "pencil" }, { "Chalk", "pencil" }, { "Marker", "pencil" },
+	{ "Book", "book" }, { "Library", "book" }, { "Report", "book" },
+	{ "Archive", "book" }, { "Exam", "book" }, { "Bag", "bag" }, { "Backpack", "bag" },
+	{ "Lunchbox", "bag" }, { "Ruler", "ruler" }, { "Globe", "globe" },
+	{ "Astronomy", "globe" }, { "Bell", "bell" }, { "Clock", "bell" },
 }
 
 local function propFor(name)
@@ -141,8 +141,9 @@ local function addProp(model, kind, at, s, body, color)
 end
 
 -- Builds the model at `origin` (its feet; facing -Z). `opts`: scale, status
--- (label status line), noLabel. The model's WorldPivot is its feet, so
--- PivotTo(pedestalTop) stands it exactly on the pedestal.
+-- (label status line), noLabel. The model's pivot is an invisible "Pivot"
+-- part at the body centre, so a placement must add PivotToBaseLift to
+-- stand the model on a surface instead of sinking it into one.
 function BrainrotFactory.Build(entry, mutation, uid, opts)
 	opts = opts or {}
 	local scale = opts.scale or 1
@@ -169,7 +170,17 @@ function BrainrotFactory.Build(entry, mutation, uid, opts)
 	else
 		bodyPart = newPart(model, "Body", Enum.PartType.Block, sized(bodySize), at(Vector3.new(0, body.y, 0)), entry.body)
 	end
-	model.PrimaryPart = bodyPart
+	-- The pivot: an invisible anchor at the body centre, carrying the
+	-- model's own orientation. It is the PrimaryPart, so PivotTo orients
+	-- the model by it. (The body itself cannot be the pivot: a Cylinder
+	-- body's part CFrame carries a 90-degree roll, and PivotTo would bake
+	-- that roll into every placement, laying cylinder brainrots on their
+	-- sides with their faces pointing sideways.)
+	local pivotPart = newPart(model, "Pivot", Enum.PartType.Block, sized(Vector3.new(0.1, 0.1, 0.1)), at(Vector3.new(0, body.y, 0)), entry.body)
+	pivotPart.Transparency = 1
+	pivotPart.CanQuery = false
+	pivotPart.CastShadow = false
+	model.PrimaryPart = pivotPart
 	if shapeKey == "Wedge" then
 		-- A dorsal fin on top: sharks, snakes and birds read as such.
 		local fin = Instance.new("WedgePart")
@@ -252,7 +263,8 @@ end
 
 -- Sets the label's third line, e.g. "BUY $60" or "HOLD [E] STEAL".
 function BrainrotFactory.SetStatus(model, text, color)
-	local body = model.PrimaryPart
+	-- The label lives on the Body part, not on the (invisible) pivot.
+	local body = model:FindFirstChild("Body")
 	local label = body and body:FindFirstChild("Label")
 	local line = label and label:FindFirstChild("StatusLine")
 	if line then

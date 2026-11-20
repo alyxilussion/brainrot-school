@@ -21,10 +21,10 @@ local function now()
 end
 
 -- How far a model's lowest point sits below its pivot, measured from the
--- bounding box. The factory builds the pivot at the feet, so this is 0 for
--- a model standing on its own feet — but any placement that puts the pivot
--- on a surface (parade lane, dropped on the grass) adds this lift so the
--- model's base touches the surface exactly instead of sinking into it.
+-- bounding box. The pivot is an invisible part at the body centre (about
+-- 1.6-1.9 studs above the feet), so any placement that puts the pivot on a
+-- surface (parade lane, pedestal, dropped on the grass) adds this lift so
+-- the model's base touches the surface exactly instead of sinking into it.
 -- Measured from the model as built, so scale is already included.
 function CarrySystem.PivotToBaseLift(model)
 	local boxCFrame, boxSize = model:GetBoundingBox()
@@ -229,7 +229,10 @@ function CarrySystem.Place(state, record, pedestal)
 	CarrySystem.ClearPrompts(record)
 	local base = G.World.GetBase(state.baseIndex)
 	local facing = base.cframe - base.cframe.Position
-	record.model:PivotTo(CFrame.new(pedestal.position) * facing)
+	-- The pivot sits at the body centre, so add the lift or the model
+	-- sinks into the pedestal up to its chest.
+	local lift = CarrySystem.PivotToBaseLift(record.model)
+	record.model:PivotTo(CFrame.new(pedestal.position + Vector3.new(0, lift, 0)) * facing)
 	record.status = "placed"
 	record.owner = state
 	record.pedestal = pedestal

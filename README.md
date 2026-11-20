@@ -23,13 +23,13 @@ stampedes the field, and a naughty crow raids unlocked classrooms.
   every 4 seconds) — click one to buy it, carry it home, place it on a
   pedestal in your classroom, and watch the money tick. Buy the next tier,
   then the next. You start with $100.
-- **Cast:** 60 original brainrots in 15 tiers (Common, Uncommon, Rare, Epic,
-  Legendary, Mythic, Divine, Secret, Celestial, Galactic, Eternal, Godly,
-  Supreme, Ultimate, PRINCIPAL), 4 per tier, each with a name, a tier colour
-  and a dollars-per-second label. Income roughly doubles per tier, from $5/s
-  (Pensil Penguin) to $131,072/s (Roh Principal Abadi); the buy price is
-  twelve times the income. Mutations multiply income: GOLD x2, DIAMOND x3,
-  LAVA x4, RAINBOW x6, GLITCH x10.
+- **Cast:** 80 original brainrots in 16 tiers (Common, Uncommon, Rare, Epic,
+  Legendary, Mythic, Divine, Hidden, Celestial, Galactic, Eternal, Godly,
+  Supreme, Ultimate, PRINCIPAL, Secret), 4 per tier plus 20 Secret, each
+  with a name, a tier colour and a dollars-per-second label. Income roughly
+  doubles per tier, from $5/s (Pencil Penguin) to $786,432/s (Mystery Manta);
+  the buy price is twelve times the income. Mutations multiply income:
+  GOLD x2, DIAMOND x3, LAVA x4, RAINBOW x6, GLITCH x10.
 - **PvP:** PULL [Q] yanks a carrier toward you and slows them (and may knock
   their brainrot loose); PUSH [F] shoves a carrier and usually knocks their
   brainrot loose ("DROPPED!" — anyone can grab it within 45 seconds); STEAL
@@ -44,7 +44,7 @@ stampedes the field, and a naughty crow raids unlocked classrooms.
 - **Machines:** the Gacha Machine by the cafeteria (Press [E], $1,000 a roll
   for a random brainrot, kinder odds than the parade) and the Fuse Lab by the
   gym (Press [E], fuse three brainrots of one tier into one of the next; three
-  PRINCIPALs fuse into a random PRINCIPAL with a random mutation).
+  PRINCIPALs fuse into a random Secret).
 - **Events:** the LUNCH RUSH! stampede every 100 seconds (15-second countdown,
   shelter in your base) and Gagak Nakal, the crow thief, every 130 seconds.
   A base lock shields you from both.

@@ -8,7 +8,7 @@ local QuestCatalog = {}
 -- key: the event counter the quest watches. target: how many. reward: cash.
 QuestCatalog.CHAPTERS = {
 	{
-		title = "Murid Baru",
+		title = "New Student",
 		steps = {
 			{ key = "buy", target = 1, text = "Buy a brainrot from the Parade", reward = 150 },
 			{ key = "place", target = 1, text = "Bring it home to your classroom", reward = 200 },
@@ -17,7 +17,7 @@ QuestCatalog.CHAPTERS = {
 		},
 	},
 	{
-		title = "Anak Nakal",
+		title = "Troublemaker",
 		steps = {
 			{ key = "pull", target = 1, text = "PULL a student or thief [Q]", reward = 500 },
 			{ key = "push", target = 1, text = "PUSH a student or thief [F]", reward = 500 },
@@ -26,7 +26,7 @@ QuestCatalog.CHAPTERS = {
 		},
 	},
 	{
-		title = "Juara Kelas",
+		title = "Class Champion",
 		steps = {
 			{ key = "rush", target = 1, text = "Survive a Lunch Rush in your base", reward = 1500 },
 			{ key = "upgrade", target = 1, text = "Buy any upgrade", reward = 1500 },
@@ -35,7 +35,7 @@ QuestCatalog.CHAPTERS = {
 		},
 	},
 	{
-		title = "Bintang Sekolah",
+		title = "School Star",
 		steps = {
 			{ key = "steal", target = 3, text = "Steal 3 brainrots", reward = 5000 },
 			{ key = "fuse", target = 1, text = "Fuse 3 brainrots in the Fuse Lab", reward = 5000 },

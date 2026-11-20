@@ -1,7 +1,7 @@
 -- Hud: the student's screen. Centered cash and $/s with the spec strip
 -- under it, a full-width event banner, the quest card on the right, the
 -- classroom card on the left, the bottom action bar (PULL Q, PUSH F, LOCK L,
--- SHOP U, REBIRTH R, QUESTS J, INDEX B) with cooldowns, the CARRYING ->
+-- SHOP U, REBIRTH R, QUESTS J, FUSE K, INDEX B) with cooldowns, the CARRYING ->
 -- RETURN TO BASE bar, toasts, the target highlight for PULL/PUSH, and the
 -- Shop, Quest, Rebirth, Gacha, Fuse and Report Card panels. Scales with the
 -- screen; nothing sits under the Roblox menu buttons.
@@ -148,9 +148,10 @@ local specText = label(specStrip, "Spec", "80 BRAINROTS  ·  16 TIERS  ·  5 MUT
 specText.ZIndex = 5
 
 ---------------------------------------------------------------------------
--- Event banner: full width, under the cash panel.
+-- Event banner: full width, under the spec strip (y 120, the strip ends
+-- at y 114, so the two never overlap).
 ---------------------------------------------------------------------------
-local banner = new("Frame", { Name = "EventBanner", Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 98), BackgroundColor3 = Color3.fromRGB(230, 60, 70), BorderSizePixel = 0, Visible = false }, gui)
+local banner = new("Frame", { Name = "EventBanner", Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 120), BackgroundColor3 = Color3.fromRGB(230, 60, 70), BorderSizePixel = 0, Visible = false }, gui)
 new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.15, 0.1), NumberSequenceKeypoint.new(0.85, 0.1), NumberSequenceKeypoint.new(1, 1) }) }, banner)
 local bannerText = label(banner, "Text", "", UDim2.new(0.8, 0, 0.8, 0), UDim2.fromScale(0.1, 0.1), WHITE)
 bannerText.TextStrokeTransparency = 0
@@ -172,7 +173,7 @@ end
 ---------------------------------------------------------------------------
 -- Toasts: short messages under the banner.
 ---------------------------------------------------------------------------
-local toastHolder = new("Frame", { Name = "Toasts", Size = UDim2.fromOffset(460, 160), Position = UDim2.new(0.5, 0, 0, 150), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1 }, gui)
+local toastHolder = new("Frame", { Name = "Toasts", Size = UDim2.fromOffset(460, 160), Position = UDim2.new(0.5, 0, 0, 170), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1 }, gui)
 new("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, toastHolder)
 local toastOrder = 0
 
@@ -204,7 +205,7 @@ end
 ---------------------------------------------------------------------------
 -- Right: quest card, below the event banner so the two never overlap.
 ---------------------------------------------------------------------------
-local questCard = card(gui, "QuestCard", UDim2.fromOffset(280, 212), UDim2.new(1, -10, 0, 150), Vector2.new(1, 0))
+local questCard = card(gui, "QuestCard", UDim2.fromOffset(280, 212), UDim2.new(1, -10, 0, 170), Vector2.new(1, 0))
 stroke(questCard, GOLD, 2)
 local questHeader = label(questCard, "Header", "QUESTS", UDim2.new(1, -20, 0, 24), UDim2.fromOffset(10, 6), GOLD, Enum.Font.FredokaOne, Enum.TextXAlignment.Left)
 local questText = label(questCard, "Step", "", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 34), WHITE, Enum.Font.GothamBold, Enum.TextXAlignment.Left)
@@ -241,7 +242,7 @@ stroke(carryBar, DARK, 3)
 local carryText = label(carryBar, "Text", "", UDim2.new(1, -20, 1, -10), UDim2.fromOffset(10, 5), DARK)
 carryText.TextStrokeTransparency = 1
 
-local actionBar = new("Frame", { Name = "ActionBar", Size = UDim2.fromOffset(640, 96), Position = UDim2.new(0.5, 0, 1, -10), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1 }, gui)
+local actionBar = new("Frame", { Name = "ActionBar", Size = UDim2.fromOffset(736, 96), Position = UDim2.new(0.5, 0, 1, -10), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1 }, gui)
 new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, actionBar)
 
 local actionButtons = {}
@@ -552,6 +553,9 @@ local ACTIONS = {
 	quests = function()
 		showPanel("quests")
 	end,
+	fuse = function()
+		showPanel("fuse")
+	end,
 	index = function()
 		showPanel("index")
 	end,
@@ -564,6 +568,7 @@ local BAR = {
 	{ "shop", "SHOP", "U", Color3.fromRGB(90, 200, 110), { Enum.KeyCode.U } },
 	{ "rebirth", "REBIRTH", "R", Color3.fromRGB(230, 90, 200), { Enum.KeyCode.R } },
 	{ "quests", "QUESTS", "J", Color3.fromRGB(240, 180, 40), { Enum.KeyCode.J } },
+	{ "fuse", "FUSE", "K", Color3.fromRGB(255, 90, 120), { Enum.KeyCode.K } },
 	{ "index", "INDEX", "B", Color3.fromRGB(150, 110, 255), { Enum.KeyCode.B } },
 }
 

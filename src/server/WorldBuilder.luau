@@ -504,7 +504,7 @@ local function paintCrest(gui)
 		frame(leftPage, "Line", UDim2.fromScale(0.7, 0.05), UDim2.fromScale(0.5, 0.3 + line * 0.15), Color3.fromRGB(150, 130, 200), UDim.new(0.5, 0))
 		frame(rightPage, "Line", UDim2.fromScale(0.7, 0.05), UDim2.fromScale(0.5, 0.3 + line * 0.15), Color3.fromRGB(150, 130, 200), UDim.new(0.5, 0))
 	end
-	-- The brainrot mascot popping out of the book: Pensil Penguin.
+	-- The brainrot mascot popping out of the book: Pencil Penguin.
 	local head = circle(gui, "MascotHead", 0.26, 0.5, 0.36, Color3.fromRGB(90, 130, 200))
 	gradient(head, Color3.fromRGB(120, 160, 235), Color3.fromRGB(60, 90, 170), 90)
 	circle(gui, "MascotBelly", 0.15, 0.5, 0.42, WHITE)
@@ -711,7 +711,7 @@ local function buildBase(root, index)
 	-- Chalkboard on the back wall: the classroom look.
 	local board = block(f, "Chalkboard", Vector3.new(14, 3, 0.2), cf * CFrame.new(0, floorTop + 3, half - 1.1), Color3.fromRGB(40, 75, 55))
 	local chalk = canvas(board, Enum.NormalId.Front, 30)
-	text(chalk, "Chalk", "KELAS " .. index .. "  ·  2 + 2 = BRAINROT", UDim2.fromScale(0.92, 0.6), UDim2.fromScale(0.5, 0.5), WHITE, Enum.Font.PatrickHand)
+	text(chalk, "Chalk", "CLASS " .. index .. "  ·  2 + 2 = BRAINROT", UDim2.fromScale(0.92, 0.6), UDim2.fromScale(0.5, 0.5), WHITE, Enum.Font.PatrickHand)
 	-- Entrance arch carrying the owner sign.
 	for _, sx in ipairs({ -1, 1 }) do
 		block(f, "ArchPillar", Vector3.new(1.5, 8, 1.5), cf * CFrame.new(sx * 12, floorTop + 4, -half + 1), WOOD_DARK, Enum.Material.Wood)
